@@ -36,6 +36,15 @@
     .bar { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap; }
     .result { margin-top:12px; font-size:14px; } .result.ok { color:var(--ok); } .result.ng { color:var(--ng); }
     .muted { color:var(--mut); font-size:12px; } .req::after { content:" *"; color:var(--ng); }
+    /* 明細カード(2段・レスポンシブ) */
+    .lrow { border:1px solid #e6e9ef; border-radius:10px; padding:8px 10px; margin-bottom:8px; background:#fff; }
+    .lrow-top { display:flex; align-items:center; gap:8px; }
+    .lno { color:var(--mut); font-size:13px; min-width:18px; text-align:center; }
+    .lrow-top .searchbox { flex:1; }
+    .lrow-bot { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px; padding-left:26px; }
+    .lrow .iname { font-size:13px; color:#38414f; flex:1; min-height:17px; overflow:hidden; text-overflow:ellipsis; }
+    .qtybox { font-size:12px; color:var(--mut); display:flex; align-items:center; gap:6px; white-space:nowrap; }
+    .qtybox .qtyinput { width:100px; text-align:right; }
     #video { width:100%; max-width:340px; border-radius:10px; background:#000; display:block; }
     .camwrap { position:relative; max-width:340px; margin:0 auto; }
     .camwrap .frame { position:absolute; top:50%; left:50%; width:70%; aspect-ratio:1; transform:translate(-50%,-50%); border:2px solid #fff; border-radius:10px; box-shadow:0 0 0 2000px rgba(0,0,0,.28); pointer-events:none; }
@@ -86,10 +95,7 @@
       </div>
 
       <div class="card">
-        <table>
-          <thead><tr><th class="no">#</th><th>品目(コード/名称で検索)</th><th class="iname">品目名</th><th class="qty">数量</th><th class="del"></th></tr></thead>
-          <tbody id="rows"></tbody>
-        </table>
+        <div id="rows"></div>
         <div class="bar">
           <div><button class="btn ghost" id="addBtn" type="button">＋ 行を追加(5行)</button> <span class="muted" id="summary" style="margin-left:8px;"></span></div>
           <div><button class="btn ghost" id="clearBtn" type="button">全クリア</button> <button class="btn primary" id="submitBtn" type="button" disabled>決定(一括移管)</button></div>
@@ -172,11 +178,17 @@
   function renderRows(){
     var tb=$('rows');
     tb.innerHTML = LINES.map(function(l,i){
-      return '<tr><td class="no">'+(i+1)+'</td>'
-        + '<td><div class="searchbox"><input class="iteminput" data-i="'+i+'" autocomplete="off" placeholder="例: B05156 / vik / ネジ" value="'+esc(l.code||'')+'"><div class="suggest" data-sug="'+i+'"></div></div></td>'
-        + '<td class="iname" data-name="'+i+'">'+esc(l.name||'')+'</td>'
-        + '<td class="qty"><input class="qtyinput" type="number" min="1" step="1" data-i="'+i+'" value="'+esc(l.qty)+'"></td>'
-        + '<td class="del"><button class="btn x" data-clear="'+i+'" title="行をクリア">×</button></td></tr>';
+      return '<div class="lrow">'
+        + '<div class="lrow-top">'
+          + '<span class="lno">'+(i+1)+'</span>'
+          + '<div class="searchbox"><input class="iteminput" data-i="'+i+'" autocomplete="off" placeholder="品目コード/名称で検索" value="'+esc(l.code||'')+'"><div class="suggest" data-sug="'+i+'"></div></div>'
+          + '<button class="btn x" data-clear="'+i+'" title="行をクリア">×</button>'
+        + '</div>'
+        + '<div class="lrow-bot">'
+          + '<span class="iname" data-name="'+i+'">'+esc(l.name||'')+'</span>'
+          + '<span class="qtybox">数量 <input class="qtyinput" type="number" min="1" step="1" data-i="'+i+'" value="'+esc(l.qty)+'"></span>'
+        + '</div>'
+      + '</div>';
     }).join('');
     tb.querySelectorAll('input.iteminput').forEach(function(inp){ var i=+inp.dataset.i;
       inp.addEventListener('input', function(){ onItemInput(i, inp); });

@@ -196,16 +196,20 @@
   function updateSubmitState(){ $('submitBtn').disabled = !(CONNECTED && validRows().length>0 && $('staff').value); }
 
   /* ===== ライブスキャン(ZXing) ===== */
-  var zxing = null;
+  var zxing = null, camActive = false;
   function buildHints(){ var h=new Map(); h.set(ZXing.DecodeHintType.TRY_HARDER, true); h.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE,ZXing.BarcodeFormat.DATA_MATRIX,ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.CODE_39,ZXing.BarcodeFormat.CODE_93,ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.ITF,ZXing.BarcodeFormat.CODABAR]); return h; }
   function startCam(){
     if(!window.ZXing){ setScanMsg('デコーダ読込中… 数秒後に再度'); return; }
-    $('camwrap').style.display='block'; $('camStart').hidden=true; $('camStop').hidden=false; setScanMsg('カメラにQR/バーコードをかざしてください…');
-    zxing = new ZXing.BrowserMultiFormatReader(buildHints(), 300);
-    zxing.decodeFromConstraints({ video:{ facingMode:{ ideal:'environment' }, width:{ideal:1280}, height:{ideal:720} } }, $('video'), function(result, err){ if(result){ onScan(result.getText()); } })
-      .catch(function(e){ setScanMsg('カメラを起動できませんでした: '+(e&&e.name||e)); stopCam(); });
+    $('camwrap').style.display='block'; $('camStart').hidden=true; $('camStop').hidden=false; setScanMsg('QR/バーコードを枠に合わせてください(1回読むと自動で止まります)…');
+    camActive = true;
+    zxing = new ZXing.BrowserMultiFormatReader(buildHints());
+    // 1回だけ読み取り→自動停止(誤って連続読取しない)。次を読むには再度[カメラ開始]
+    zxing.decodeOnceFromConstraints({ video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1920 }, height:{ ideal:1080 } } }, $('video'))
+      .then(function(result){ closeCam_(); if(result) onScan(result.getText()); })
+      .catch(function(e){ var wasActive=camActive; closeCam_(); if(wasActive && e && e.name!=='NotFoundException') setScanMsg('カメラを起動できませんでした: '+(e&&e.name||e)); });
   }
-  function stopCam(){ $('camStart').hidden=false; $('camStop').hidden=true; $('camwrap').style.display='none'; if(zxing){ try{ zxing.reset(); }catch(e){} zxing=null; } }
+  function stopCam(){ closeCam_(); setScanMsg('停止しました。'); }
+  function closeCam_(){ camActive=false; $('camStart').hidden=false; $('camStop').hidden=true; $('camwrap').style.display='none'; if(zxing){ try{ zxing.reset(); }catch(e){} zxing=null; } }
   function setScanMsg(m){ $('scanMsg').textContent=m; }
   function beep(){ try{ var c=new (window.AudioContext||window.webkitAudioContext)(); var o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value=880; g.gain.value=0.05; o.start(); setTimeout(function(){o.stop();c.close();},110); }catch(e){} }
   function onScan(text){ text=(text||'').trim(); if(!text) return; var now=Date.now(); if(text===lastScan.code && (now-lastScan.t)<2500) return; lastScan={code:text,t:now}; beep(); setScanMsg('読取: '+text+' → 照合中…'); api('resolveCode',{code:text}).then(onResolved).catch(function(e){ setScanMsg('エラー: '+e); }); }

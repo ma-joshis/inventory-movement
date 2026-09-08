@@ -36,9 +36,9 @@
     .bar { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap; }
     .result { margin-top:12px; font-size:14px; } .result.ok { color:var(--ok); } .result.ng { color:var(--ng); }
     .muted { color:var(--mut); font-size:12px; } .req::after { content:" *"; color:var(--ng); }
-    #video { width:100%; max-width:420px; border-radius:10px; background:#000; }
-    .camwrap { position:relative; max-width:420px; }
-    .camwrap .frame { position:absolute; inset:18% 12%; border:2px solid #fff; border-radius:10px; box-shadow:0 0 0 2000px rgba(0,0,0,.15); pointer-events:none; }
+    #video { width:100%; max-width:340px; border-radius:10px; background:#000; display:block; }
+    .camwrap { position:relative; max-width:340px; margin:0 auto; }
+    .camwrap .frame { position:absolute; top:50%; left:50%; width:70%; aspect-ratio:1; transform:translate(-50%,-50%); border:2px solid #fff; border-radius:10px; box-shadow:0 0 0 2000px rgba(0,0,0,.28); pointer-events:none; }
     #signin { text-align:center; padding:40px 16px; }
   </style>
 </head>
@@ -201,25 +201,42 @@
   function updateSubmitState(){ $('submitBtn').disabled = !(CONNECTED && validRows().length>0 && $('staff').value); }
 
   /* ===== ライブスキャン(ZXing) ===== */
-  var zxing = null, camActive = false, scanned_ = false;
+  var camStream = null, scanLoop = null, camActive = false, scanned_ = false;
   function buildHints(){ var h=new Map(); h.set(ZXing.DecodeHintType.TRY_HARDER, true); h.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE,ZXing.BarcodeFormat.DATA_MATRIX,ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.CODE_39,ZXing.BarcodeFormat.CODE_93,ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.ITF,ZXing.BarcodeFormat.CODABAR]); return h; }
   function startCam(){
     if(!window.ZXing){ setScanMsg('デコーダ読込中… 数秒後に再度'); return; }
-    $('camwrap').style.display='block'; $('camStart').hidden=true; $('camStop').hidden=false; setScanMsg('QR/バーコードを枠に合わせてください(1回読むと自動で止まります)…');
+    $('camwrap').style.display='block'; $('camStart').hidden=true; $('camStop').hidden=false; setScanMsg('QR/バーコードを白い枠いっぱいに写してください…');
     camActive = true; scanned_ = false;
-    // 以前読めていた continuous 方式に戻し、最初の1件で自動停止(one-shot)
-    zxing = new ZXing.BrowserMultiFormatReader(buildHints(), 150);
-    zxing.decodeFromConstraints({ video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } } }, $('video'),
-      function(result, err){ if(result && !scanned_){ scanned_=true; var t=result.getText(); closeCam_(); onScan(t); } })
-      .then(function(){ setupZoom_(); })
-      .catch(function(e){ var wa=camActive; closeCam_(); if(wa && e && e.name!=='NotFoundException') setScanMsg('カメラを起動できませんでした: '+(e&&e.name||e)); });
+    navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } } })
+      .then(function(stream){ camStream=stream; var v=$('video'); v.srcObject=stream; v.setAttribute('playsinline',''); if(v.play) v.play().catch(function(){}); setupZoom_(stream.getVideoTracks()[0]); loopScan_(); })
+      .catch(function(e){ closeCam_(); setScanMsg('カメラを起動できませんでした: '+(e&&e.name||e)); });
+  }
+  function loopScan_(){
+    var reader=new ZXing.MultiFormatReader(), hints=buildHints();
+    var canvas=document.createElement('canvas'), ctx=canvas.getContext('2d');
+    var v=$('video');
+    function tick(){
+      if(!camActive) return;
+      try{
+        if(v.readyState>=2 && v.videoWidth){
+          var vw=v.videoWidth, vh=v.videoHeight, side=Math.floor(Math.min(vw,vh)*0.7);
+          var sx=Math.floor((vw-side)/2), sy=Math.floor((vh-side)/2);
+          if(canvas.width!==side){ canvas.width=side; canvas.height=side; }
+          ctx.drawImage(v, sx,sy,side,side, 0,0,side,side);   // 中央を切り出し=ソフトズーム
+          var src=new ZXing.HTMLCanvasElementLuminanceSource(canvas);
+          var res=reader.decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src)), hints);
+          if(res && !scanned_){ scanned_=true; var t=res.getText(); closeCam_(); onScan(t); return; }
+        }
+      }catch(e){ /* NotFound: 次フレームへ */ }
+      scanLoop=setTimeout(tick, 110);
+    }
+    tick();
   }
   function stopCam(){ closeCam_(); setScanMsg('停止しました。'); }
-  function closeCam_(){ camActive=false; $('zoomWrap').style.display='none'; $('camStart').hidden=false; $('camStop').hidden=true; $('camwrap').style.display='none'; if(zxing){ try{ zxing.reset(); }catch(e){} zxing=null; } }
-  function setupZoom_(){
+  function closeCam_(){ camActive=false; if(scanLoop){ clearTimeout(scanLoop); scanLoop=null; } $('zoomWrap').style.display='none'; $('camStart').hidden=false; $('camStop').hidden=true; $('camwrap').style.display='none'; if(camStream){ camStream.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); camStream=null; } var vv=$('video'); if(vv) vv.srcObject=null; }
+  function setupZoom_(track){
     try{
-      var stream=$('video').srcObject; if(!stream) return;
-      var track=stream.getVideoTracks()[0]; if(!track || !track.getCapabilities) return;
+      if(!track || !track.getCapabilities){ $('zoomWrap').style.display='none'; return; }
       var caps=track.getCapabilities(); var any=false;
       var zoomOk = caps && caps.zoom && (caps.zoom.max||0) > (caps.zoom.min||0);
       $('zoom').style.display = zoomOk?'':'none';

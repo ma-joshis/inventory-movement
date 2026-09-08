@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>在庫移管</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+  <style>
+    :root { --bd:#d6d9e0; --bg:#f4f6f9; --pri:#1763d6; --pri2:#0f4ea8; --ok:#127a3e; --ng:#c0362c; --mut:#5b6472; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:"Segoe UI","Hiragino Kaku Gothic ProN",Meiryo,system-ui,sans-serif; color:#1c2430; background:var(--bg); }
+    header { background:var(--pri2); color:#fff; padding:12px 16px; font-size:18px; font-weight:600; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:20; }
+    header .who { font-size:12px; font-weight:400; opacity:.9; }
+    .wrap { max-width:1000px; margin:0 auto; padding:14px; }
+    .card { background:#fff; border:1px solid var(--bd); border-radius:10px; padding:14px 16px; margin-bottom:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; }
+    label { display:block; font-size:12px; color:var(--mut); margin-bottom:4px; font-weight:600; }
+    select, input[type=date], input[type=text], input[type=number] { width:100%; padding:9px 10px; border:1px solid var(--bd); border-radius:8px; font-size:15px; background:#fff; }
+    .banner { padding:10px 12px; border-radius:8px; font-size:14px; margin-bottom:14px; }
+    .banner.warn { background:#fff4e5; border:1px solid #f0c27a; color:#8a5a00; }
+    .banner.ng { background:#fdecea; border:1px solid #f0a9a2; color:#a12820; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { text-align:left; padding:7px 8px; border-bottom:1px solid #eef0f4; font-size:14px; vertical-align:middle; }
+    th { color:var(--mut); font-size:12px; }
+    td.no { width:32px; color:var(--mut); } td.qty { width:110px; } td.del { width:44px; text-align:center; } td.iname { color:#38414f; font-size:13px; }
+    .searchbox { position:relative; }
+    .qtyinput { text-align:right; }
+    .suggest { position:absolute; left:0; right:0; top:100%; background:#fff; border:1px solid var(--bd); border-top:none; border-radius:0 0 8px 8px; max-height:260px; overflow:auto; z-index:30; display:none; box-shadow:0 6px 18px rgba(0,0,0,.12); }
+    .suggest div { padding:8px 10px; cursor:pointer; font-size:13px; border-top:1px solid #eef0f4; }
+    .suggest div:hover { background:#eaf1fd; }
+    .code { font-weight:700; color:var(--pri2); margin-right:8px; }
+    .btn { border:none; border-radius:8px; padding:11px 18px; font-size:15px; font-weight:600; cursor:pointer; }
+    .btn.primary { background:var(--pri); color:#fff; } .btn.primary:disabled { background:#9db8e6; cursor:not-allowed; }
+    .btn.ghost { background:#eef1f6; color:#38414f; } .btn.x { background:none; color:var(--ng); font-size:18px; padding:2px 8px; }
+    .bar { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap; }
+    .result { margin-top:12px; font-size:14px; } .result.ok { color:var(--ok); } .result.ng { color:var(--ng); }
+    .muted { color:var(--mut); font-size:12px; } .req::after { content:" *"; color:var(--ng); }
+    #video { width:100%; max-width:420px; border-radius:10px; background:#000; }
+    .camwrap { position:relative; max-width:420px; }
+    .camwrap .frame { position:absolute; inset:18% 12%; border:2px solid #fff; border-radius:10px; box-shadow:0 0 0 2000px rgba(0,0,0,.15); pointer-events:none; }
+    #signin { text-align:center; padding:40px 16px; }
+  </style>
+</head>
+<body>
+  <header>在庫移管 <span class="who" id="who"></span></header>
+  <div class="wrap">
+
+    <div id="signin" class="card">
+      <p>社内Googleアカウントでサインインしてください。</p>
+      <div id="gbtn" style="display:inline-block"></div>
+      <div id="signinMsg" class="muted" style="margin-top:10px"></div>
+    </div>
+
+    <div id="app" hidden>
+      <div class="card">
+        <div class="grid">
+          <div><label>移管元 在庫場所</label><select id="origin"></select></div>
+          <div><label>移管先 在庫場所</label><select id="dest"></select></div>
+          <div><label>移管日</label><input type="date" id="tdate"></div>
+          <div><label class="req">担当者(製造部)</label><select id="staff"><option value="">選択してください</option></select></div>
+        </div>
+        <div id="whoRow" class="muted" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="bar" style="margin-top:0">
+          <b>QR / バーコードをかざして読取(ライブ)</b>
+          <div>
+            <button class="btn primary" id="camStart" type="button">カメラ開始</button>
+            <button class="btn ghost" id="camStop" type="button" hidden>停止</button>
+          </div>
+        </div>
+        <div class="camwrap" id="camwrap" style="display:none;margin-top:10px">
+          <video id="video" playsinline muted></video>
+          <div class="frame"></div>
+        </div>
+        <div id="scanMsg" class="muted" style="margin-top:8px"></div>
+        <div id="scanPick" style="display:none;border:1px solid var(--bd);border-radius:8px;margin-top:8px;overflow:hidden"></div>
+        <div class="muted" style="margin-top:6px;">かざすだけで一番上の空行へ自動追加(旧コードは自動で新コードへ変換)。手入力も下の表で可能。</div>
+      </div>
+
+      <div class="card">
+        <table>
+          <thead><tr><th class="no">#</th><th>品目(コード/名称で検索)</th><th class="iname">品目名</th><th class="qty">数量</th><th class="del"></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div class="bar">
+          <div><button class="btn ghost" id="addBtn" type="button">＋ 行を追加(5行)</button> <span class="muted" id="summary" style="margin-left:8px;"></span></div>
+          <div><button class="btn ghost" id="clearBtn" type="button">全クリア</button> <button class="btn primary" id="submitBtn" type="button" disabled>決定(一括移管)</button></div>
+        </div>
+        <div id="result" class="result"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  /* ===== 設定(この2つを埋めてください) ===== */
+  var CONFIG = {
+    GAS_API_URL: 'https://script.google.com/macros/s/AKfycbysFsni50z4Vi-qaDa3Di7owezI8i2JaZl3PrZUkVXdcHboMItUhdmw8pU-sIRO4oUzjA/exec',
+    GOOGLE_CLIENT_ID: 'ここにOAuthクライアントIDを貼る.apps.googleusercontent.com'
+  };
+
+  var idToken = '', LINES = [], INIT_ROWS = 10, CONNECTED = false, timers = {}, lastScan = { code:'', t:0 };
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);}); }
+  function blankRow(){ return { itemId:'', code:'', name:'', qty:'', _cand:[] }; }
+
+  /* ===== GAS API 呼び出し(text/plainでプリフライト回避) ===== */
+  function api(action, extra){
+    var body = { action: action, idToken: idToken };
+    if (extra) for (var k in extra) body[k] = extra[k];
+    return fetch(CONFIG.GAS_API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body), redirect:'follow' })
+      .then(function(r){ return r.json(); });
+  }
+
+  /* ===== Google サインイン ===== */
+  window.onload = function(){
+    var wait = setInterval(function(){
+      if (window.google && google.accounts && google.accounts.id){
+        clearInterval(wait);
+        google.accounts.id.initialize({ client_id: CONFIG.GOOGLE_CLIENT_ID, callback: onCredential });
+        google.accounts.id.renderButton($('gbtn'), { theme:'filled_blue', size:'large', text:'signin_with', shape:'pill' });
+      }
+    }, 100);
+  };
+  function onCredential(resp){
+    idToken = resp.credential;
+    var p = parseJwt(idToken);
+    $('who').textContent = p && p.email ? ('👤 ' + (p.name || p.email)) : '';
+    $('signin').hidden = true; $('app').hidden = false;
+    initApp();
+  }
+  function parseJwt(t){ try { return JSON.parse(decodeURIComponent(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2);}).join(''))); } catch(e){ return null; } }
+
+  /* ===== 初期化 ===== */
+  function initApp(){
+    for (var i=0;i<INIT_ROWS;i++) LINES.push(blankRow());
+    renderRows();
+    $('addBtn').addEventListener('click', function(){ for(var i=0;i<5;i++) LINES.push(blankRow()); renderRows(); });
+    $('clearBtn').addEventListener('click', function(){ LINES=[]; for(var i=0;i<INIT_ROWS;i++) LINES.push(blankRow()); renderRows(); setResult('',''); });
+    $('submitBtn').addEventListener('click', submit);
+    $('staff').addEventListener('change', updateSubmitState);
+    $('camStart').addEventListener('click', startCam);
+    $('camStop').addEventListener('click', stopCam);
+    api('init', {}).then(onInit).catch(function(e){ setWhoRow('初期化に失敗: '+e, true); });
+  }
+  function onInit(d){
+    if (d.today) $('tdate').value = d.today;
+    if (!d.connected){ CONNECTED=false; setWhoRow('Salesforce未接続: '+(d.message||''), true); updateSubmitState(); return; }
+    CONNECTED = true;
+    var opt=function(sp){ return '<option value="'+sp.id+'">'+esc(sp.name)+'</option>'; };
+    $('origin').innerHTML = d.stockPlaces.map(opt).join('');
+    $('dest').innerHTML   = d.stockPlaces.map(opt).join('');
+    if (d.defaultOriginId) $('origin').value=d.defaultOriginId;
+    if (d.defaultDestId)   $('dest').value=d.defaultDestId;
+    var opts = '<option value="">選択してください</option>' + d.staff.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join('');
+    if (d.myStaffId && d.staff.every(function(s){ return s.id!==d.myStaffId; })) opts += '<option value="'+d.myStaffId+'">'+esc(d.myName)+'</option>';
+    $('staff').innerHTML = opts;
+    if (d.myStaffId){ $('staff').value=d.myStaffId; $('staff').disabled=true; setWhoRow('担当者(自動選択・固定): '+d.myName); }
+    else { $('staff').disabled=false; setWhoRow('担当者が未登録です。手動で選択してください。'); }
+    updateSubmitState();
+  }
+  function setWhoRow(m, ng){ var w=$('whoRow'); w.textContent=m; w.style.color = ng?'var(--ng)':'var(--mut)'; }
+
+  /* ===== 明細表(手入力検索) ===== */
+  function renderRows(){
+    var tb=$('rows');
+    tb.innerHTML = LINES.map(function(l,i){
+      return '<tr><td class="no">'+(i+1)+'</td>'
+        + '<td><div class="searchbox"><input class="iteminput" data-i="'+i+'" autocomplete="off" placeholder="例: B05156 / vik / ネジ" value="'+esc(l.code||'')+'"><div class="suggest" data-sug="'+i+'"></div></div></td>'
+        + '<td class="iname" data-name="'+i+'">'+esc(l.name||'')+'</td>'
+        + '<td class="qty"><input class="qtyinput" type="number" min="1" step="1" data-i="'+i+'" value="'+esc(l.qty)+'"></td>'
+        + '<td class="del"><button class="btn x" data-clear="'+i+'" title="行をクリア">×</button></td></tr>';
+    }).join('');
+    tb.querySelectorAll('input.iteminput').forEach(function(inp){ var i=+inp.dataset.i;
+      inp.addEventListener('input', function(){ onItemInput(i, inp); });
+      inp.addEventListener('focus', function(){ if((inp.value||'').trim()) doSearch(i, inp); });
+      inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); if(LINES[i]._cand&&LINES[i]._cand.length) pickItem(i, LINES[i]._cand[0]); } else if(e.key==='Escape'){ hideSug(i); } });
+      inp.addEventListener('blur', function(){ setTimeout(function(){ hideSug(i); }, 200); });
+    });
+    tb.querySelectorAll('input.qtyinput').forEach(function(inp){ var i=+inp.dataset.i; inp.addEventListener('input', function(){ LINES[i].qty=inp.value; updateSummary(); updateSubmitState(); }); });
+    tb.querySelectorAll('button[data-clear]').forEach(function(b){ b.addEventListener('click', function(){ clearRow(+b.dataset.clear); }); });
+    updateSummary(); updateSubmitState();
+  }
+  function sugEl(i){ return document.querySelector('.suggest[data-sug="'+i+'"]'); }
+  function nameCell(i){ return document.querySelector('.iname[data-name="'+i+'"]'); }
+  function hideSug(i){ var s=sugEl(i); if(s) s.style.display='none'; }
+  function doSearch(i, inp){ var t=(inp.value||'').trim(); if(!t){ hideSug(i); return; } if(timers[i]) clearTimeout(timers[i]); timers[i]=setTimeout(function(){ api('searchItems',{term:t}).then(function(res){ renderSug(i, inp, res.items||[]); }).catch(function(){ hideSug(i); }); }, 230); }
+  function onItemInput(i, inp){ LINES[i].itemId=''; LINES[i].name=''; LINES[i].code=''; var nc=nameCell(i); if(nc) nc.textContent=''; updateSubmitState(); doSearch(i, inp); }
+  function renderSug(i, inp, items){ LINES[i]._cand=items||[]; var s=sugEl(i); if(!s) return; if(!items.length){ s.innerHTML='<div class="muted" style="cursor:default">該当なし</div>'; s.style.display='block'; return; } s.innerHTML=items.map(function(it,k){ return '<div data-k="'+k+'"><span class="code">'+esc(it.code)+'</span>'+esc(it.name)+'</div>'; }).join(''); s.querySelectorAll('div[data-k]').forEach(function(el){ el.addEventListener('mousedown', function(ev){ ev.preventDefault(); pickItem(i, items[+el.dataset.k]); }); }); s.style.display='block'; }
+  function pickItem(i, it){ if(!it) return; LINES[i].itemId=it.id; LINES[i].code=it.code; LINES[i].name=it.name; if(!LINES[i].qty||Number(LINES[i].qty)<=0) LINES[i].qty=1; var inp=document.querySelector('input.iteminput[data-i="'+i+'"]'); if(inp) inp.value=it.code; var nc=nameCell(i); if(nc) nc.textContent=it.name; var q=document.querySelector('input.qtyinput[data-i="'+i+'"]'); if(q) q.value=LINES[i].qty; hideSug(i); if(q) q.focus(); updateSummary(); updateSubmitState(); }
+  function clearRow(i){ LINES[i]=blankRow(); var inp=document.querySelector('input.iteminput[data-i="'+i+'"]'); if(inp) inp.value=''; var q=document.querySelector('input.qtyinput[data-i="'+i+'"]'); if(q) q.value=''; var nc=nameCell(i); if(nc) nc.textContent=''; hideSug(i); updateSummary(); updateSubmitState(); }
+  function validRows(){ return LINES.filter(function(l){ return l.itemId && Number(l.qty)>0; }); }
+  function updateSummary(){ var v=validRows(); var q=v.reduce(function(a,l){return a+(Number(l.qty)||0);},0); $('summary').textContent = v.length ? (v.length+'品目 / 合計数量 '+q) : ''; }
+  function updateSubmitState(){ $('submitBtn').disabled = !(CONNECTED && validRows().length>0 && $('staff').value); }
+
+  /* ===== ライブスキャン(ZXing) ===== */
+  var zxing = null;
+  function buildHints(){ var h=new Map(); h.set(ZXing.DecodeHintType.TRY_HARDER, true); h.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE,ZXing.BarcodeFormat.DATA_MATRIX,ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.CODE_39,ZXing.BarcodeFormat.CODE_93,ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.ITF,ZXing.BarcodeFormat.CODABAR]); return h; }
+  function startCam(){
+    if(!window.ZXing){ setScanMsg('デコーダ読込中… 数秒後に再度'); return; }
+    $('camwrap').style.display='block'; $('camStart').hidden=true; $('camStop').hidden=false; setScanMsg('カメラにQR/バーコードをかざしてください…');
+    zxing = new ZXing.BrowserMultiFormatReader(buildHints(), 300);
+    zxing.decodeFromConstraints({ video:{ facingMode:{ ideal:'environment' }, width:{ideal:1280}, height:{ideal:720} } }, $('video'), function(result, err){ if(result){ onScan(result.getText()); } })
+      .catch(function(e){ setScanMsg('カメラを起動できませんでした: '+(e&&e.name||e)); stopCam(); });
+  }
+  function stopCam(){ $('camStart').hidden=false; $('camStop').hidden=true; $('camwrap').style.display='none'; if(zxing){ try{ zxing.reset(); }catch(e){} zxing=null; } }
+  function setScanMsg(m){ $('scanMsg').textContent=m; }
+  function beep(){ try{ var c=new (window.AudioContext||window.webkitAudioContext)(); var o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value=880; g.gain.value=0.05; o.start(); setTimeout(function(){o.stop();c.close();},110); }catch(e){} }
+  function onScan(text){ text=(text||'').trim(); if(!text) return; var now=Date.now(); if(text===lastScan.code && (now-lastScan.t)<2500) return; lastScan={code:text,t:now}; beep(); setScanMsg('読取: '+text+' → 照合中…'); api('resolveCode',{code:text}).then(onResolved).catch(function(e){ setScanMsg('エラー: '+e); }); }
+  function onResolved(res){ hidePick(); if(!res.items||!res.items.length){ setScanMsg('該当なし: '+res.scanned+'(未登録の可能性)'); return; } if(res.items.length===1){ var it=res.items[0]; fillTopEmpty(it); setScanMsg('✓ 追加: '+it.code+' '+it.name+(res.scanned!==it.code?'（旧 '+res.scanned+'）':'')); return; } setScanMsg('旧コード '+res.scanned+' は複数の新品目に対応。選択してください:'); showPick(res.items); }
+  function fillTopEmpty(it){ var i=-1; for(var k=0;k<LINES.length;k++){ if(!LINES[k].itemId){ i=k; break; } } if(i<0){ LINES.push(blankRow()); renderRows(); i=LINES.length-1; } LINES[i].itemId=it.id; LINES[i].code=it.code; LINES[i].name=it.name; if(!LINES[i].qty||Number(LINES[i].qty)<=0) LINES[i].qty=1; var inp=document.querySelector('input.iteminput[data-i="'+i+'"]'); if(inp) inp.value=it.code; var nc=nameCell(i); if(nc) nc.textContent=it.name; var q=document.querySelector('input.qtyinput[data-i="'+i+'"]'); if(q) q.value=LINES[i].qty; updateSummary(); updateSubmitState(); }
+  function showPick(items){ var el=$('scanPick'); el.innerHTML=items.map(function(it,k){ return '<div data-pk="'+k+'" style="padding:10px;border-top:1px solid #eef0f4;cursor:pointer"><span class="code">'+esc(it.code)+'</span>'+esc(it.name)+'</div>'; }).join(''); el.querySelectorAll('div[data-pk]').forEach(function(d){ d.addEventListener('click', function(){ var it=items[+d.dataset.pk]; fillTopEmpty(it); setScanMsg('✓ 追加: '+it.code+' '+it.name); hidePick(); }); }); el.style.display='block'; }
+  function hidePick(){ $('scanPick').style.display='none'; }
+
+  /* ===== 送信 ===== */
+  function submit(){
+    if(!$('staff').value){ setResult('担当者を選択してください。','ng'); return; }
+    var v=validRows(); if(!v.length){ setResult('品目と数量のある行がありません。','ng'); return; }
+    if($('origin').value===$('dest').value){ setResult('移管元と移管先が同じです。','ng'); return; }
+    var payload={ header:{ originId:$('origin').value, destId:$('dest').value, date:$('tdate').value, staffId:$('staff').value }, lines: v.map(function(l){ return { itemId:l.itemId, qty:Number(l.qty) }; }) };
+    $('submitBtn').disabled=true; setResult('登録中…','');
+    api('submit',{payload:payload}).then(onSubmit).catch(function(e){ setResult('エラー: '+e,'ng'); updateSubmitState(); });
+  }
+  function onSubmit(res){
+    if(res.ok){ setResult('✓ '+res.count+'件を一括移管しました(在庫更新済み)。','ok'); LINES=[]; for(var i=0;i<INIT_ROWS;i++) LINES.push(blankRow()); renderRows(); }
+    else if(res.message){ setResult('登録できませんでした: '+res.message,'ng'); }
+    else { var m=(res.errors||[]).map(function(e){ return '行'+e.row+': '+(e.errors||[]).map(function(x){return x.message||JSON.stringify(x);}).join('; '); }); setResult('一部エラー: '+m.join(' / '),'ng'); }
+    updateSubmitState();
+  }
+  function setResult(m,c){ var r=$('result'); r.textContent=m; r.className='result '+(c||''); }
+</script>
+</body>
+</html>

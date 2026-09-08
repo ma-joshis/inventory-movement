@@ -75,6 +75,11 @@
           <video id="video" playsinline muted></video>
           <div class="frame"></div>
         </div>
+        <div id="zoomWrap" style="display:none;align-items:center;gap:8px;margin-top:8px;max-width:420px">
+          <span class="muted zlabel">ズーム</span>
+          <input type="range" id="zoom" style="flex:1">
+          <button class="btn ghost" id="torchBtn" type="button" style="display:none;padding:6px 12px">💡ライト</button>
+        </div>
         <div id="scanMsg" class="muted" style="margin-top:8px"></div>
         <div id="scanPick" style="display:none;border:1px solid var(--bd);border-radius:8px;margin-top:8px;overflow:hidden"></div>
         <div class="muted" style="margin-top:6px;">かざすだけで一番上の空行へ自動追加(旧コードは自動で新コードへ変換)。手入力も下の表で可能。</div>
@@ -196,20 +201,39 @@
   function updateSubmitState(){ $('submitBtn').disabled = !(CONNECTED && validRows().length>0 && $('staff').value); }
 
   /* ===== ライブスキャン(ZXing) ===== */
-  var zxing = null, camActive = false;
+  var zxing = null, camActive = false, scanned_ = false;
   function buildHints(){ var h=new Map(); h.set(ZXing.DecodeHintType.TRY_HARDER, true); h.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE,ZXing.BarcodeFormat.DATA_MATRIX,ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.CODE_39,ZXing.BarcodeFormat.CODE_93,ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.ITF,ZXing.BarcodeFormat.CODABAR]); return h; }
   function startCam(){
     if(!window.ZXing){ setScanMsg('デコーダ読込中… 数秒後に再度'); return; }
     $('camwrap').style.display='block'; $('camStart').hidden=true; $('camStop').hidden=false; setScanMsg('QR/バーコードを枠に合わせてください(1回読むと自動で止まります)…');
-    camActive = true;
-    zxing = new ZXing.BrowserMultiFormatReader(buildHints());
-    // 1回だけ読み取り→自動停止(誤って連続読取しない)。次を読むには再度[カメラ開始]
-    zxing.decodeOnceFromConstraints({ video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1920 }, height:{ ideal:1080 } } }, $('video'))
-      .then(function(result){ closeCam_(); if(result) onScan(result.getText()); })
-      .catch(function(e){ var wasActive=camActive; closeCam_(); if(wasActive && e && e.name!=='NotFoundException') setScanMsg('カメラを起動できませんでした: '+(e&&e.name||e)); });
+    camActive = true; scanned_ = false;
+    // 以前読めていた continuous 方式に戻し、最初の1件で自動停止(one-shot)
+    zxing = new ZXing.BrowserMultiFormatReader(buildHints(), 150);
+    zxing.decodeFromConstraints({ video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } } }, $('video'),
+      function(result, err){ if(result && !scanned_){ scanned_=true; var t=result.getText(); closeCam_(); onScan(t); } })
+      .then(function(){ setupZoom_(); })
+      .catch(function(e){ var wa=camActive; closeCam_(); if(wa && e && e.name!=='NotFoundException') setScanMsg('カメラを起動できませんでした: '+(e&&e.name||e)); });
   }
   function stopCam(){ closeCam_(); setScanMsg('停止しました。'); }
-  function closeCam_(){ camActive=false; $('camStart').hidden=false; $('camStop').hidden=true; $('camwrap').style.display='none'; if(zxing){ try{ zxing.reset(); }catch(e){} zxing=null; } }
+  function closeCam_(){ camActive=false; $('zoomWrap').style.display='none'; $('camStart').hidden=false; $('camStop').hidden=true; $('camwrap').style.display='none'; if(zxing){ try{ zxing.reset(); }catch(e){} zxing=null; } }
+  function setupZoom_(){
+    try{
+      var stream=$('video').srcObject; if(!stream) return;
+      var track=stream.getVideoTracks()[0]; if(!track || !track.getCapabilities) return;
+      var caps=track.getCapabilities(); var any=false;
+      var zoomOk = caps && caps.zoom && (caps.zoom.max||0) > (caps.zoom.min||0);
+      $('zoom').style.display = zoomOk?'':'none';
+      var zl=document.querySelector('.zlabel'); if(zl) zl.style.display = zoomOk?'':'none';
+      if(zoomOk){ any=true; var z=$('zoom'); z.min=caps.zoom.min; z.max=caps.zoom.max; z.step=caps.zoom.step||0.1;
+        var v=caps.zoom.min + (caps.zoom.max-caps.zoom.min)*0.4; z.value=v;
+        track.applyConstraints({advanced:[{zoom:v}]}).catch(function(){});
+        z.oninput=function(){ track.applyConstraints({advanced:[{zoom:Number(z.value)}]}).catch(function(){}); }; }
+      var torchOk = caps && caps.torch; var tb=$('torchBtn');
+      tb.style.display = torchOk?'':'none';
+      if(torchOk){ any=true; tb._on=false; tb.onclick=function(){ tb._on=!tb._on; track.applyConstraints({advanced:[{torch:!!tb._on}]}).catch(function(){}); }; }
+      $('zoomWrap').style.display = any?'flex':'none';
+    }catch(e){}
+  }
   function setScanMsg(m){ $('scanMsg').textContent=m; }
   function beep(){ try{ var c=new (window.AudioContext||window.webkitAudioContext)(); var o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value=880; g.gain.value=0.05; o.start(); setTimeout(function(){o.stop();c.close();},110); }catch(e){} }
   function onScan(text){ text=(text||'').trim(); if(!text) return; var now=Date.now(); if(text===lastScan.code && (now-lastScan.t)<2500) return; lastScan={code:text,t:now}; beep(); setScanMsg('読取: '+text+' → 照合中…'); api('resolveCode',{code:text}).then(onResolved).catch(function(e){ setScanMsg('エラー: '+e); }); }

@@ -84,9 +84,7 @@
           <video id="video" playsinline muted></video>
           <div class="frame"></div>
         </div>
-        <div id="zoomWrap" style="display:none;align-items:center;gap:8px;margin-top:8px;max-width:420px">
-          <span class="muted zlabel">ズーム</span>
-          <input type="range" id="zoom" style="flex:1">
+        <div id="zoomWrap" style="display:none;justify-content:center;align-items:center;gap:8px;margin-top:8px;max-width:340px;margin-left:auto;margin-right:auto">
           <button class="btn ghost" id="torchBtn" type="button" style="display:none;padding:6px 12px">💡ライト</button>
         </div>
         <div id="scanMsg" class="muted" style="margin-top:8px"></div>
@@ -250,13 +248,8 @@
     try{
       if(!track || !track.getCapabilities){ $('zoomWrap').style.display='none'; return; }
       var caps=track.getCapabilities(); var any=false;
-      var zoomOk = caps && caps.zoom && (caps.zoom.max||0) > (caps.zoom.min||0);
-      $('zoom').style.display = zoomOk?'':'none';
-      var zl=document.querySelector('.zlabel'); if(zl) zl.style.display = zoomOk?'':'none';
-      if(zoomOk){ any=true; var z=$('zoom'); z.min=caps.zoom.min; z.max=caps.zoom.max; z.step=caps.zoom.step||0.1;
-        var v=caps.zoom.min + (caps.zoom.max-caps.zoom.min)*0.4; z.value=v;
-        track.applyConstraints({advanced:[{zoom:v}]}).catch(function(){});
-        z.oninput=function(){ track.applyConstraints({advanced:[{zoom:Number(z.value)}]}).catch(function(){}); }; }
+      // ズームは常に一番引いた状態(最小=最広角)に固定。スライダーは出さない
+      if(caps && caps.zoom && caps.zoom.min!=null){ track.applyConstraints({advanced:[{zoom:caps.zoom.min}]}).catch(function(){}); }
       var torchOk = caps && caps.torch; var tb=$('torchBtn');
       tb.style.display = torchOk?'':'none';
       if(torchOk){ any=true; tb._on=false; tb.onclick=function(){ tb._on=!tb._on; track.applyConstraints({advanced:[{torch:!!tb._on}]}).catch(function(){}); }; }

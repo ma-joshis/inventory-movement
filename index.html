@@ -224,7 +224,7 @@
     if(!window.ZXing){ setScanMsg('デコーダ読込中… 数秒後に再度'); return; }
     $('camwrap').style.display='block'; $('camStart').hidden=true; $('camStop').hidden=false; setScanMsg('QRは白枠に/横長バーコードは画面いっぱいに大きく・水平に写してください…');
     camActive = true; scanned_ = false;
-    navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } } })
+    navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1920 }, height:{ ideal:1080 } } })
       .then(function(stream){ camStream=stream; var v=$('video'); v.srcObject=stream; v.setAttribute('playsinline',''); if(v.play) v.play().catch(function(){}); setupZoom_(stream.getVideoTracks()[0]); loopScan_(); })
       .catch(function(e){ closeCam_(); setScanMsg('カメラを起動できませんでした: '+(e&&e.name||e)); });
   }
@@ -245,10 +245,10 @@
       if(!camActive) return;
       if(v.readyState>=2 && v.videoWidth){
         var vw=v.videoWidth, vh=v.videoHeight;
-        // (1) 全体=横長の1Dバーコード向け(両端を切らない)
-        var t = decodeRegion(0,0,vw,vh);
-        // (2) 中央正方形を拡大=小さいQR向けソフトズーム
-        if(!t){ var side=Math.floor(Math.min(vw,vh)*0.6); t=decodeRegion(Math.floor((vw-side)/2),Math.floor((vh-side)/2),side,side); }
+        // (1) 中央の横帯(全幅)=横長の1Dバーコード向け(両端を切らない)
+        var t = decodeRegion(0, Math.floor(vh*0.28), vw, Math.floor(vh*0.44));
+        // (2) 中央正方形=小さいQR向けソフトズーム
+        if(!t){ var side=Math.floor(Math.min(vw,vh)*0.62); t=decodeRegion(Math.floor((vw-side)/2),Math.floor((vh-side)/2),side,side); }
         if(t && !scanned_){ scanned_=true; closeCam_(); onScan(t); return; }
       }
       scanLoop=setTimeout(tick, 130);

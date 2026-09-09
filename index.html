@@ -222,7 +222,7 @@
   function buildHints(){ var h=new Map(); h.set(ZXing.DecodeHintType.TRY_HARDER, true); h.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE,ZXing.BarcodeFormat.DATA_MATRIX,ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.CODE_39,ZXing.BarcodeFormat.CODE_93,ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.ITF,ZXing.BarcodeFormat.CODABAR]); return h; }
   function startCam(){
     if(!window.ZXing){ setScanMsg('デコーダ読込中… 数秒後に再度'); return; }
-    $('camwrap').style.display='block'; $('camStart').hidden=true; $('camStop').hidden=false; setScanMsg('QR/バーコードを白い枠いっぱいに写してください…');
+    $('camwrap').style.display='block'; $('camStart').hidden=true; $('camStop').hidden=false; setScanMsg('QRは白枠に/横長バーコードは画面いっぱいに大きく・水平に写してください…');
     camActive = true; scanned_ = false;
     navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } } })
       .then(function(stream){ camStream=stream; var v=$('video'); v.srcObject=stream; v.setAttribute('playsinline',''); if(v.play) v.play().catch(function(){}); setupZoom_(stream.getVideoTracks()[0]); loopScan_(); })
@@ -232,20 +232,26 @@
     var reader=new ZXing.MultiFormatReader(), hints=buildHints();
     var canvas=document.createElement('canvas'), ctx=canvas.getContext('2d');
     var v=$('video');
+    function decodeRegion(sx,sy,sw,sh){
+      try{
+        if(canvas.width!==sw||canvas.height!==sh){ canvas.width=sw; canvas.height=sh; }
+        ctx.drawImage(v, sx,sy,sw,sh, 0,0,sw,sh);
+        var src=new ZXing.HTMLCanvasElementLuminanceSource(canvas);
+        var res=reader.decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src)), hints);
+        return res ? res.getText() : null;
+      }catch(e){ return null; }
+    }
     function tick(){
       if(!camActive) return;
-      try{
-        if(v.readyState>=2 && v.videoWidth){
-          var vw=v.videoWidth, vh=v.videoHeight, side=Math.floor(Math.min(vw,vh)*0.7);
-          var sx=Math.floor((vw-side)/2), sy=Math.floor((vh-side)/2);
-          if(canvas.width!==side){ canvas.width=side; canvas.height=side; }
-          ctx.drawImage(v, sx,sy,side,side, 0,0,side,side);   // 中央を切り出し=ソフトズーム
-          var src=new ZXing.HTMLCanvasElementLuminanceSource(canvas);
-          var res=reader.decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src)), hints);
-          if(res && !scanned_){ scanned_=true; var t=res.getText(); closeCam_(); onScan(t); return; }
-        }
-      }catch(e){ /* NotFound: 次フレームへ */ }
-      scanLoop=setTimeout(tick, 110);
+      if(v.readyState>=2 && v.videoWidth){
+        var vw=v.videoWidth, vh=v.videoHeight;
+        // (1) 全体=横長の1Dバーコード向け(両端を切らない)
+        var t = decodeRegion(0,0,vw,vh);
+        // (2) 中央正方形を拡大=小さいQR向けソフトズーム
+        if(!t){ var side=Math.floor(Math.min(vw,vh)*0.6); t=decodeRegion(Math.floor((vw-side)/2),Math.floor((vh-side)/2),side,side); }
+        if(t && !scanned_){ scanned_=true; closeCam_(); onScan(t); return; }
+      }
+      scanLoop=setTimeout(tick, 130);
     }
     tick();
   }

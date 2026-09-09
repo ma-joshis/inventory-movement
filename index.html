@@ -120,7 +120,13 @@
     var body = { action: action, idToken: idToken };
     if (extra) for (var k in extra) body[k] = extra[k];
     return fetch(CONFIG.GAS_API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body), redirect:'follow' })
-      .then(function(r){ return r.json(); });
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if(j && j.code==='AUTH'){ reSignIn_(); } return j; });
+  }
+  function reSignIn_(){
+    idToken=''; $('app').hidden=true; $('signin').hidden=false;
+    $('signinMsg').textContent='サインインの有効期限が切れました。もう一度サインインしてください。';
+    try{ google.accounts.id.prompt(); }catch(e){}
   }
 
   /* ===== Google サインイン ===== */
@@ -128,8 +134,9 @@
     var wait = setInterval(function(){
       if (window.google && google.accounts && google.accounts.id){
         clearInterval(wait);
-        google.accounts.id.initialize({ client_id: CONFIG.GOOGLE_CLIENT_ID, callback: onCredential });
+        google.accounts.id.initialize({ client_id: CONFIG.GOOGLE_CLIENT_ID, callback: onCredential, auto_select: true });
         google.accounts.id.renderButton($('gbtn'), { theme:'filled_blue', size:'large', text:'signin_with', shape:'pill' });
+        try{ google.accounts.id.prompt(); }catch(e){}
       }
     }, 100);
   };
@@ -259,7 +266,7 @@
   function setScanMsg(m){ $('scanMsg').textContent=m; }
   function beep(){ try{ var c=new (window.AudioContext||window.webkitAudioContext)(); var o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value=880; g.gain.value=0.05; o.start(); setTimeout(function(){o.stop();c.close();},110); }catch(e){} }
   function onScan(text){ text=(text||'').trim(); if(!text) return; var now=Date.now(); if(text===lastScan.code && (now-lastScan.t)<2500) return; lastScan={code:text,t:now}; beep(); setScanMsg('読取: '+text+' → 照合中…'); api('resolveCode',{code:text}).then(onResolved).catch(function(e){ setScanMsg('エラー: '+e); }); }
-  function onResolved(res){ hidePick(); if(!res.items||!res.items.length){ setScanMsg('該当なし: '+res.scanned+'(未登録の可能性)'); return; } if(res.items.length===1){ var it=res.items[0]; fillTopEmpty(it); setScanMsg('✓ 追加: '+it.code+' '+it.name+(res.scanned!==it.code?'（旧 '+res.scanned+'）':'')); return; } setScanMsg('旧コード '+res.scanned+' は複数の新品目に対応。選択してください:'); showPick(res.items); }
+  function onResolved(res){ hidePick(); if(res && res.ok===false && res.message){ setScanMsg(res.message); return; } if(!res||!res.items||!res.items.length){ setScanMsg('該当なし: '+((res&&res.scanned)||'')+'(未登録の可能性)'); return; } if(res.items.length===1){ var it=res.items[0]; fillTopEmpty(it); setScanMsg('✓ 追加: '+it.code+' '+it.name+(res.scanned!==it.code?'（旧 '+res.scanned+'）':'')); return; } setScanMsg('旧コード '+res.scanned+' は複数の新品目に対応。選択してください:'); showPick(res.items); }
   function fillTopEmpty(it){ var i=-1; for(var k=0;k<LINES.length;k++){ if(!LINES[k].itemId){ i=k; break; } } if(i<0){ LINES.push(blankRow()); renderRows(); i=LINES.length-1; } LINES[i].itemId=it.id; LINES[i].code=it.code; LINES[i].name=it.name; if(!LINES[i].qty||Number(LINES[i].qty)<=0) LINES[i].qty=1; var inp=document.querySelector('input.iteminput[data-i="'+i+'"]'); if(inp) inp.value=it.code; var nc=nameCell(i); if(nc) nc.textContent=it.name; var q=document.querySelector('input.qtyinput[data-i="'+i+'"]'); if(q) q.value=LINES[i].qty; updateSummary(); updateSubmitState(); }
   function showPick(items){ var el=$('scanPick'); el.innerHTML=items.map(function(it,k){ return '<div data-pk="'+k+'" style="padding:10px;border-top:1px solid #eef0f4;cursor:pointer"><span class="code">'+esc(it.code)+'</span>'+esc(it.name)+'</div>'; }).join(''); el.querySelectorAll('div[data-pk]').forEach(function(d){ d.addEventListener('click', function(){ var it=items[+d.dataset.pk]; fillTopEmpty(it); setScanMsg('✓ 追加: '+it.code+' '+it.name); hidePick(); }); }); el.style.display='block'; }
   function hidePick(){ $('scanPick').style.display='none'; }

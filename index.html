@@ -74,6 +74,7 @@
           <button class="tab active" id="tabMove" type="button">在庫移管</button>
           <button class="tab" id="tabAdjust" type="button">引き落とし(消費)</button>
           <button class="tab" id="tabCheck" type="button">在庫確認</button>
+          <button class="tab" id="tabCount" type="button">棚卸</button>
         </div>
         <div class="grid" id="hdrGrid" style="margin-top:12px">
           <div><label id="lblOrigin">移管元 在庫場所</label><select id="origin"></select></div>
@@ -122,6 +123,27 @@
         <div id="checkResult" style="margin-top:12px"></div>
         <div class="muted" style="margin-top:6px;">現在の理論在庫(UM)を在庫場所ごとに表示します。読み取りのみで在庫は変更しません。</div>
       </div>
+
+      <div class="card" id="countHdr" style="display:none">
+        <div class="grid">
+          <div><label>棚卸する在庫場所</label><select id="countPlace"></select></div>
+          <div><label>カウント担当者</label><div id="counterName" class="muted" style="padding-top:8px">-</div></div>
+          <div><label>カウント方式</label><label style="font-weight:400;display:flex;align-items:center;gap:8px;padding-top:6px"><input type="checkbox" id="blindToggle" checked style="width:auto"> ブラインド(システム在庫を隠す)</label></div>
+        </div>
+      </div>
+
+      <div class="card" id="countCard" style="display:none">
+        <div class="searchbox">
+          <input id="countInput" autocomplete="off" placeholder="原材料の品目コード/名称で検索・またはカメラで読取">
+          <div class="suggest" id="countSug"></div>
+        </div>
+        <div id="countRows" style="margin-top:10px"></div>
+        <div class="bar">
+          <div><span class="muted" id="countSummary"></span></div>
+          <div><button class="btn ghost" id="countClear" type="button">全クリア</button></div>
+        </div>
+        <div class="muted" style="margin-top:6px;">原材料のみ対象。実数を入力すると差異(実数−システム)を表示します。※ 保存・承認・在庫反映は次フェーズで実装します。</div>
+      </div>
     </div>
   </div>
 
@@ -133,7 +155,7 @@
   };
 
   var SESSION = '', SESSION_PL = null, APP_READY = false, pendingAuth_ = null, SS_KEY = 'invtrans_session';
-  var LINES = [], INIT_ROWS = 10, CONNECTED = false, timers = {}, lastScan = { code:'', t:0 }, MODE = 'move';
+  var LINES = [], COUNTS = [], MYINFO = {}, INIT_ROWS = 10, CONNECTED = false, timers = {}, lastScan = { code:'', t:0 }, MODE = 'move';
   function $(id){ return document.getElementById(id); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);}); }
   function blankRow(){ return { itemId:'', code:'', name:'', qty:'', _cand:[] }; }
@@ -142,21 +164,24 @@
     $('tabMove').classList.toggle('active', m==='move');
     $('tabAdjust').classList.toggle('active', m==='adjust');
     $('tabCheck').classList.toggle('active', m==='check');
-    var isCheck = (m==='check');
-    // 在庫確認タブでは 入力系(ヘッダ項目・明細・決定)を隠し、照会カードを出す。カメラは共通で使う
-    $('hdrGrid').style.display  = isCheck ? 'none' : '';
-    $('whoRow').style.display   = isCheck ? 'none' : '';
-    $('entryCard').style.display= isCheck ? 'none' : '';
-    $('checkCard').style.display= isCheck ? '' : 'none';
-    $('scanHint').style.display = isCheck ? 'none' : '';
-    if(!isCheck){
+    $('tabCount').classList.toggle('active', m==='count');
+    var isEntry=(m==='move'||m==='adjust'), isCheck=(m==='check'), isCount=(m==='count');
+    // タブごとに表示を切替(カメラの読取カードは全モード共通で使う)
+    $('hdrGrid').style.display   = isEntry ? '' : 'none';
+    $('whoRow').style.display    = isEntry ? '' : 'none';
+    $('entryCard').style.display = isEntry ? '' : 'none';
+    $('checkCard').style.display = isCheck ? '' : 'none';
+    $('countHdr').style.display  = isCount ? '' : 'none';
+    $('countCard').style.display = isCount ? '' : 'none';
+    $('scanHint').style.display  = isEntry ? '' : 'none';
+    if(isEntry){
       $('destWrap').style.display = (m==='adjust') ? 'none' : '';
       $('lblOrigin').textContent = (m==='adjust') ? '引き落とし元 在庫場所' : '移管元 在庫場所';
       $('lblDate').textContent = (m==='adjust') ? '日付' : '移管日';
       $('submitBtn').textContent = (m==='adjust') ? '決定(一括引き落とし)' : '決定(一括移管)';
       updateSubmitState();
     }
-    setScanMsg(isCheck ? 'カメラで品目を読み取ると在庫を照会します。' : '');
+    setScanMsg(isCheck ? 'カメラで品目を読み取ると在庫を照会します。' : (isCount ? 'カメラで品目を読み取るとカウントに追加します。' : ''));
   }
 
   /* ===== セッション(GAS発行のHMACトークン。Google IDトークンの1時間制限を回避) ===== */
@@ -249,7 +274,10 @@
     $('tabMove').addEventListener('click', function(){ setMode('move'); });
     $('tabAdjust').addEventListener('click', function(){ setMode('adjust'); });
     $('tabCheck').addEventListener('click', function(){ setMode('check'); });
-    wireCheck();
+    $('tabCount').addEventListener('click', function(){ setMode('count'); });
+    wireCheck(); wireCount();
+    $('blindToggle').addEventListener('change', renderCounts);
+    $('countClear').addEventListener('click', function(){ COUNTS=[]; renderCounts(); });
     // セッション維持: 25分ごと & タブ復帰時に軽量ping(操作していなくても失効させない/先回り再認証)
     setInterval(function(){ if(!document.hidden && SESSION) apiRaw_('touch',{}).catch(function(){}); }, 25*60*1000);
     document.addEventListener('visibilitychange', function(){
@@ -268,6 +296,11 @@
     $('dest').innerHTML   = d.stockPlaces.map(opt).join('');
     if (d.defaultOriginId) $('origin').value=d.defaultOriginId;
     if (d.defaultDestId)   $('dest').value=d.defaultDestId;
+    // 棚卸: 在庫場所プルダウン + 既定(勤務地の在庫置場) + カウント担当者
+    MYINFO = { staffId:d.myStaffId||'', name:d.myName||'', workPlace:d.myWorkPlace||'' };
+    $('countPlace').innerHTML = d.stockPlaces.map(opt).join('');
+    if (d.defaultPlaceId) $('countPlace').value=d.defaultPlaceId;
+    $('counterName').textContent = d.myName ? (d.myName + (d.myWorkPlace?(' ／ '+d.myWorkPlace):'')) : '(Googleログイン者)';
     var opts = '<option value="">選択してください</option>' + d.staff.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join('');
     if (d.myStaffId && d.staff.every(function(s){ return s.id!==d.myStaffId; })) opts += '<option value="'+d.myStaffId+'">'+esc(d.myName)+'</option>';
     $('staff').innerHTML = opts;
@@ -369,9 +402,9 @@
   }
   function setScanMsg(m){ $('scanMsg').textContent=m; }
   function beep(){ try{ var c=new (window.AudioContext||window.webkitAudioContext)(); var o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value=880; g.gain.value=0.05; o.start(); setTimeout(function(){o.stop();c.close();},110); }catch(e){} }
-  function onScan(text){ text=(text||'').trim(); if(!text) return; var now=Date.now(); if(text===lastScan.code && (now-lastScan.t)<2500) return; lastScan={code:text,t:now}; beep(); setScanMsg('読取: '+text+' → 照合中…'); api('resolveCode',{code:text}).then(onResolved).catch(function(e){ setScanMsg('エラー: '+e); }); }
+  function onScan(text){ text=(text||'').trim(); if(!text) return; var now=Date.now(); if(text===lastScan.code && (now-lastScan.t)<2500) return; lastScan={code:text,t:now}; beep(); setScanMsg('読取: '+text+' → 照合中…'); api('resolveCode',{code:text, materialOnly: MODE==='count'}).then(onResolved).catch(function(e){ setScanMsg('エラー: '+e); }); }
   function onResolved(res){ hidePick(); if(res && res.ok===false && res.message){ setScanMsg(res.message); return; } if(!res||!res.items||!res.items.length){ setScanMsg('該当なし: '+((res&&res.scanned)||'')+'(未登録の可能性)'); return; } if(res.items.length===1){ var it=res.items[0]; handlePicked(it); setScanMsg((MODE==='check'?'在庫照会: ':'✓ 追加: ')+it.code+' '+it.name+(res.scanned!==it.code?'（旧 '+res.scanned+'）':'')); return; } setScanMsg('旧コード '+res.scanned+' は複数の新品目に対応。選択してください:'); showPick(res.items); }
-  function handlePicked(it){ if(!it) return; if(MODE==='check'){ doCheck(it); } else { fillTopEmpty(it); } }
+  function handlePicked(it){ if(!it) return; if(MODE==='check'){ doCheck(it); } else if(MODE==='count'){ addCountLine(it); } else { fillTopEmpty(it); } }
   function fillTopEmpty(it){ var i=-1; for(var k=0;k<LINES.length;k++){ if(!LINES[k].itemId){ i=k; break; } } if(i<0){ LINES.push(blankRow()); renderRows(); i=LINES.length-1; } LINES[i].itemId=it.id; LINES[i].code=it.code; LINES[i].name=it.name; if(!LINES[i].qty||Number(LINES[i].qty)<=0) LINES[i].qty=1; var inp=document.querySelector('input.iteminput[data-i="'+i+'"]'); if(inp) inp.value=it.code; var nc=nameCell(i); if(nc) nc.textContent=it.name; var q=document.querySelector('input.qtyinput[data-i="'+i+'"]'); if(q) q.value=LINES[i].qty; updateSummary(); updateSubmitState(); }
   function showPick(items){ var el=$('scanPick'); el.innerHTML=items.map(function(it,k){ return '<div data-pk="'+k+'" style="padding:10px;border-top:1px solid #eef0f4;cursor:pointer"><span class="code">'+esc(it.code)+'</span>'+esc(it.name)+'</div>'; }).join(''); el.querySelectorAll('div[data-pk]').forEach(function(d){ d.addEventListener('click', function(){ var it=items[+d.dataset.pk]; handlePicked(it); setScanMsg((MODE==='check'?'在庫照会: ':'✓ 追加: ')+it.code+' '+it.name); hidePick(); }); }); el.style.display='block'; }
   function hidePick(){ $('scanPick').style.display='none'; }
@@ -399,6 +432,64 @@
     el.innerHTML=head
       +'<div style="margin:4px 0 8px"><b>合計 '+fmt(total)+' '+esc(unit)+'</b> <span class="muted">('+rows.length+'ヶ所)</span></div>'
       +'<div style="overflow-x:auto"><table><thead><tr><th>在庫場所</th><th style="text-align:right">在庫数量</th><th style="text-align:right">有効在庫</th><th>ロット</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+  }
+
+  /* ===== 棚卸タブ(カウント→差異。SF書き込みは次フェーズ) ===== */
+  var countTimer=null, countCand=[];
+  function wireCount(){
+    var inp=$('countInput'); if(!inp) return;
+    inp.addEventListener('input', function(){ var t=(inp.value||'').trim(); if(!t){ hideCountSug(); return; } if(countTimer)clearTimeout(countTimer); countTimer=setTimeout(function(){ api('searchItems',{term:t, materialOnly:true}).then(function(res){ renderCountSug(res.items||[]); }).catch(function(){ hideCountSug(); }); },230); });
+    inp.addEventListener('focus', function(){ if((inp.value||'').trim() && countCand.length){ $('countSug').style.display='block'; } });
+    inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); if(countCand.length) addCountLine(countCand[0]); } else if(e.key==='Escape'){ hideCountSug(); } });
+    inp.addEventListener('blur', function(){ setTimeout(hideCountSug,200); });
+  }
+  function renderCountSug(items){ countCand=items||[]; var s=$('countSug'); if(!s) return; if(!items.length){ s.innerHTML='<div class="muted" style="cursor:default">該当なし(原材料のみ)</div>'; s.style.display='block'; return; } s.innerHTML=items.map(function(it,k){ return '<div data-nk="'+k+'"><span class="code">'+esc(it.code)+'</span>'+esc(it.name)+'</div>'; }).join(''); s.querySelectorAll('div[data-nk]').forEach(function(el){ el.addEventListener('mousedown', function(ev){ ev.preventDefault(); addCountLine(items[+el.dataset.nk]); }); }); s.style.display='block'; }
+  function hideCountSug(){ var s=$('countSug'); if(s) s.style.display='none'; }
+  function addCountLine(it){
+    if(!it) return;
+    var placeId=$('countPlace').value;
+    if(!placeId){ setScanMsg('先に棚卸する在庫場所を選んでください。'); return; }
+    var ci=$('countInput'); if(ci) ci.value=''; hideCountSug();
+    for(var k=0;k<COUNTS.length;k++){ if(COUNTS[k].itemId===it.id){ var ex=document.querySelector('input.countinput[data-ci="'+k+'"]'); if(ex){ ex.focus(); ex.select(); } setScanMsg('既に一覧にあります: '+it.code+' '+it.name); return; } }
+    api('stocktakeStock',{itemId:it.id, placeId:placeId}).then(function(res){
+      var sys=(res&&res.ok)?(Number(res.sysQty)||0):0; var unit=(res&&res.unit)||'';
+      COUNTS.unshift({ itemId:it.id, code:it.code, name:it.name, sys:sys, unit:unit, count:'' });
+      renderCounts();
+      var q=document.querySelector('input.countinput[data-ci="0"]'); if(q) q.focus();
+    }).catch(function(e){ setScanMsg('在庫取得エラー: '+e); });
+  }
+  function renderCounts(){
+    var blind=$('blindToggle').checked;
+    var tb=$('countRows');
+    tb.innerHTML = COUNTS.map(function(c,i){
+      var sysCell = blind ? '<span class="muted">(非表示)</span>' : (fmt(c.sys)+' '+esc(c.unit));
+      return '<div class="lrow">'
+        + '<div class="lrow-top"><span class="lno">'+(i+1)+'</span>'
+          + '<span style="flex:1"><span class="code">'+esc(c.code)+'</span>'+esc(c.name)+'</span>'
+          + '<button class="btn x" data-cdel="'+i+'" title="行を削除">×</button></div>'
+        + '<div class="lrow-bot" style="flex-wrap:wrap;gap:8px 14px">'
+          + '<span class="qtybox">システム '+sysCell+'</span>'
+          + '<span class="qtybox">実数 <input class="countinput qtyinput" type="number" min="0" step="1" inputmode="numeric" data-ci="'+i+'" value="'+esc(c.count)+'"></span>'
+          + '<span class="qtybox">差異 <b data-diff="'+i+'" style="color:var(--mut)"></b></span>'
+        + '</div></div>';
+    }).join('');
+    tb.querySelectorAll('input.countinput').forEach(function(inp){ var i=+inp.dataset.ci; inp.addEventListener('input', function(){ COUNTS[i].count=inp.value; updateCountRow(i); updateCountSummary(); }); });
+    tb.querySelectorAll('button[data-cdel]').forEach(function(b){ b.addEventListener('click', function(){ COUNTS.splice(+b.dataset.cdel,1); renderCounts(); }); });
+    COUNTS.forEach(function(_,i){ updateCountRow(i); });
+    updateCountSummary();
+  }
+  function updateCountRow(i){
+    var c=COUNTS[i]; if(!c) return; var blind=$('blindToggle').checked;
+    var el=document.querySelector('b[data-diff="'+i+'"]'); if(!el) return;
+    if(blind){ el.textContent='－'; el.style.color='var(--mut)'; return; }
+    if(c.count===''||c.count==null){ el.textContent=''; return; }
+    var d=(Number(c.count)||0)-c.sys; el.textContent=(d>0?'+':'')+fmt(d); el.style.color=(d===0?'var(--ok)':'var(--ng)');
+  }
+  function updateCountSummary(){
+    var blind=$('blindToggle').checked;
+    var entered=COUNTS.filter(function(c){ return c.count!=='' && c.count!=null; }).length;
+    var diffs=COUNTS.filter(function(c){ return c.count!=='' && c.count!=null && (Number(c.count)||0)!==c.sys; }).length;
+    $('countSummary').textContent = COUNTS.length ? (COUNTS.length+'品目 / 実数入力 '+entered + (blind?'':(' / 差異 '+diffs))) : '';
   }
 
   /* ===== 送信 ===== */

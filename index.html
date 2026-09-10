@@ -12,6 +12,8 @@
     body { margin:0; font-family:"Segoe UI","Hiragino Kaku Gothic ProN",Meiryo,system-ui,sans-serif; color:#1c2430; background:var(--bg); }
     header { background:var(--pri2); color:#fff; padding:12px 16px; font-size:18px; font-weight:600; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:20; }
     header .who { font-size:12px; font-weight:400; opacity:.9; }
+    header #switchUser { background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.4); border-radius:6px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+    header #switchUser:hover { background:rgba(255,255,255,.28); }
     .wrap { max-width:1000px; margin:0 auto; padding:14px; }
     .card { background:#fff; border:1px solid var(--bd); border-radius:10px; padding:14px 16px; margin-bottom:14px; }
     .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; }
@@ -55,7 +57,10 @@
   </style>
 </head>
 <body>
-  <header>在庫移管 <span class="who" id="who"></span></header>
+  <header>
+    <span>在庫移管 <span class="who" id="who"></span></span>
+    <button id="switchUser" type="button" hidden>ユーザー切替</button>
+  </header>
   <div class="wrap">
 
     <div id="signin" class="card">
@@ -191,6 +196,7 @@
     SESSION = tok || ''; SESSION_PL = tok ? parseSession_(tok) : null;
     try{ if(tok) localStorage.setItem(SS_KEY, tok); else localStorage.removeItem(SS_KEY); }catch(e){}
     if(SESSION_PL){ $('who').textContent = '👤 ' + (SESSION_PL.name || SESSION_PL.email || ''); }
+    var sw=$('switchUser'); if(sw) sw.hidden = !tok;
   }
   function sessionAlive_(){ return !!(SESSION_PL && SESSION_PL.exp && (SESSION_PL.exp*1000 > Date.now()+60000)); }
 
@@ -225,6 +231,20 @@
   }
   /* 失効を検知したら: 画面は消さず入力を保持したまま、上部に再サインインを促す */
   function handleAuthLost_(){ $('relogin').hidden=false; try{ google.accounts.id.prompt(); }catch(e){} }
+  function refreshInit_(){ api('init',{}).then(onInit).catch(function(){}); }
+  /* ユーザー切替: セッション破棄→自動選択を止めて別アカウントでサインインし直す(共有端末・棚卸の担当交代用) */
+  function switchUser_(){
+    if(!confirm('ユーザーを切り替えますか？入力中の内容(移管リスト・棚卸カウント)は消えます。')) return;
+    LINES=[]; for(var i=0;i<INIT_ROWS;i++) LINES.push(blankRow()); if(APP_READY) renderRows();
+    COUNTS=[]; if(APP_READY) renderCounts();
+    setResult('','');
+    setSession_('');                                   // セッション破棄(localStorageからも削除)
+    try{ google.accounts.id.disableAutoSelect(); }catch(e){}   // 次回は自動選択せずアカウント選択させる
+    $('who').textContent='';
+    $('app').hidden=true; $('relogin').hidden=true; $('signin').hidden=false;
+    $('signinMsg').textContent='別のアカウントでサインインしてください。';
+    try{ google.accounts.id.prompt(); }catch(e){}
+  }
 
   /* ===== Google サインイン → セッション発行 ===== */
   window.onload = function(){
@@ -247,9 +267,12 @@
       .then(function(r){ return r.json(); })
       .then(function(j){
         if(j && j.ok && j.session){
+          var prevEmail = SESSION_PL ? SESSION_PL.email : '';
+          var wasReady = APP_READY;
           setSession_(j.session);
           $('signin').hidden=true; $('app').hidden=false; $('relogin').hidden=true;
           bootApp_();
+          if(wasReady && j.email && j.email !== prevEmail) refreshInit_();   // ユーザー切替: 新ユーザーの担当者/既定を再取得(通常の無操作更新では再取得しない=タブ維持)
           if(pendingAuth_) pendingAuth_.resolve(true);
           return true;
         }
@@ -276,6 +299,7 @@
     $('tabCheck').addEventListener('click', function(){ setMode('check'); });
     $('tabCount').addEventListener('click', function(){ setMode('count'); });
     wireCheck(); wireCount();
+    $('switchUser').addEventListener('click', switchUser_);
     $('blindToggle').addEventListener('change', renderCounts);
     $('countClear').addEventListener('click', function(){ COUNTS=[]; renderCounts(); });
     // セッション維持: 25分ごと & タブ復帰時に軽量ping(操作していなくても失効させない/先回り再認証)

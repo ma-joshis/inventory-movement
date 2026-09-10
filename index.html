@@ -65,6 +65,10 @@
     </div>
 
     <div id="app" hidden>
+      <div id="relogin" class="banner ng" hidden style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span>サインインの有効期限が切れました。<b>入力内容はそのまま保持しています。</b>もう一度サインインしてください。</span>
+        <span id="rebtn" style="display:inline-block"></span>
+      </div>
       <div class="card">
         <div class="tabs">
           <button class="tab active" id="tabMove" type="button">在庫移管</button>
@@ -117,7 +121,8 @@
     GOOGLE_CLIENT_ID: '952982265733-h7d6hldt8ggopotniaeocp53tv1h36vl.apps.googleusercontent.com'
   };
 
-  var idToken = '', LINES = [], INIT_ROWS = 10, CONNECTED = false, timers = {}, lastScan = { code:'', t:0 }, MODE = 'move';
+  var SESSION = '', SESSION_PL = null, APP_READY = false, pendingAuth_ = null, SS_KEY = 'invtrans_session';
+  var LINES = [], INIT_ROWS = 10, CONNECTED = false, timers = {}, lastScan = { code:'', t:0 }, MODE = 'move';
   function $(id){ return document.getElementById(id); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);}); }
   function blankRow(){ return { itemId:'', code:'', name:'', qty:'', _cand:[] }; }
@@ -132,41 +137,84 @@
     updateSubmitState();
   }
 
-  /* ===== GAS API 呼び出し(text/plainでプリフライト回避) ===== */
-  function api(action, extra){
-    var body = { action: action, idToken: idToken };
+  /* ===== セッション(GAS発行のHMACトークン。Google IDトークンの1時間制限を回避) ===== */
+  function b64urlToJson_(b64){ try{ var p=b64.replace(/-/g,'+').replace(/_/g,'/'); while(p.length%4)p+='='; return JSON.parse(decodeURIComponent(atob(p).split('').map(function(c){return '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2);}).join(''))); }catch(e){ return null; } }
+  function parseSession_(tok){ return tok ? b64urlToJson_(tok.split('.')[0]) : null; }
+  function setSession_(tok){
+    SESSION = tok || ''; SESSION_PL = tok ? parseSession_(tok) : null;
+    try{ if(tok) localStorage.setItem(SS_KEY, tok); else localStorage.removeItem(SS_KEY); }catch(e){}
+    if(SESSION_PL){ $('who').textContent = '👤 ' + (SESSION_PL.name || SESSION_PL.email || ''); }
+  }
+  function sessionAlive_(){ return !!(SESSION_PL && SESSION_PL.exp && (SESSION_PL.exp*1000 > Date.now()+60000)); }
+
+  /* ===== GAS API 呼び出し(セッション優先。text/plainでプリフライト回避) ===== */
+  function apiRaw_(action, extra){
+    var body = { action: action, session: SESSION };
     if (extra) for (var k in extra) body[k] = extra[k];
     return fetch(CONFIG.GAS_API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body), redirect:'follow' })
       .then(function(r){ return r.json(); })
-      .then(function(j){ if(j && j.code==='AUTH'){ reSignIn_(); } return j; });
+      .then(function(j){ if(j && j.session){ setSession_(j.session); } return j; });   // スライド更新を反映
   }
-  function reSignIn_(){
-    idToken=''; $('app').hidden=true; $('signin').hidden=false;
-    $('signinMsg').textContent='サインインの有効期限が切れました。もう一度サインインしてください。';
-    try{ google.accounts.id.prompt(); }catch(e){}
+  function api(action, extra){
+    return apiRaw_(action, extra).then(function(j){
+      if(j && j.code==='AUTH'){
+        return trySilentReauth_().then(function(ok){
+          if(ok) return apiRaw_(action, extra);     // 無操作で再認証できたら1回だけ再試行
+          handleAuthLost_(); return j;
+        });
+      }
+      return j;
+    });
   }
+  /* セッション失効時: Google自動選択で“無操作”再認証を試す(数秒で諦める) */
+  function trySilentReauth_(){
+    return new Promise(function(resolve){
+      if(!(window.google && google.accounts && google.accounts.id)){ resolve(false); return; }
+      var settled=false; function settle(v){ if(settled) return; settled=true; pendingAuth_=null; resolve(v); }
+      pendingAuth_ = { resolve: settle };
+      try{ google.accounts.id.prompt(); }catch(e){ settle(false); return; }
+      setTimeout(function(){ settle(false); }, 4000);
+    });
+  }
+  /* 失効を検知したら: 画面は消さず入力を保持したまま、上部に再サインインを促す */
+  function handleAuthLost_(){ $('relogin').hidden=false; try{ google.accounts.id.prompt(); }catch(e){} }
 
-  /* ===== Google サインイン ===== */
+  /* ===== Google サインイン → セッション発行 ===== */
   window.onload = function(){
+    var saved=''; try{ saved=localStorage.getItem(SS_KEY)||''; }catch(e){}
+    if(saved){ setSession_(saved); if(sessionAlive_()){ $('signin').hidden=true; $('app').hidden=false; bootApp_(); } }
     var wait = setInterval(function(){
       if (window.google && google.accounts && google.accounts.id){
         clearInterval(wait);
         google.accounts.id.initialize({ client_id: CONFIG.GOOGLE_CLIENT_ID, callback: onCredential, auto_select: true });
         google.accounts.id.renderButton($('gbtn'), { theme:'filled_blue', size:'large', text:'signin_with', shape:'pill' });
-        try{ google.accounts.id.prompt(); }catch(e){}
+        if($('rebtn')) google.accounts.id.renderButton($('rebtn'), { theme:'filled_blue', size:'medium', text:'signin_with', shape:'pill' });
+        if(!sessionAlive_()){ try{ google.accounts.id.prompt(); }catch(e){} }
       }
     }, 100);
   };
-  function onCredential(resp){
-    idToken = resp.credential;
-    var p = parseJwt(idToken);
-    $('who').textContent = p && p.email ? ('👤 ' + (p.name || p.email)) : '';
-    $('signin').hidden = true; $('app').hidden = false;
-    initApp();
+  function onCredential(resp){ authenticate_(resp.credential); }
+  /* Google IDトークンをGASへ送り、セッショントークンを受け取る */
+  function authenticate_(googleToken){
+    return fetch(CONFIG.GAS_API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'auth', idToken:googleToken }), redirect:'follow' })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(j && j.ok && j.session){
+          setSession_(j.session);
+          $('signin').hidden=true; $('app').hidden=false; $('relogin').hidden=true;
+          bootApp_();
+          if(pendingAuth_) pendingAuth_.resolve(true);
+          return true;
+        }
+        $('signinMsg').textContent = (j&&j.message) || 'サインインに失敗しました。';
+        if(pendingAuth_) pendingAuth_.resolve(false);
+        return false;
+      })
+      .catch(function(){ if(pendingAuth_) pendingAuth_.resolve(false); return false; });
   }
-  function parseJwt(t){ try { return JSON.parse(decodeURIComponent(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2);}).join(''))); } catch(e){ return null; } }
 
-  /* ===== 初期化 ===== */
+  /* ===== 初期化(サインイン成否に関わらず一度だけ) ===== */
+  function bootApp_(){ if(APP_READY) return; APP_READY=true; initApp(); }
   function initApp(){
     for (var i=0;i<INIT_ROWS;i++) LINES.push(blankRow());
     renderRows();
@@ -178,9 +226,16 @@
     $('camStop').addEventListener('click', stopCam);
     $('tabMove').addEventListener('click', function(){ setMode('move'); });
     $('tabAdjust').addEventListener('click', function(){ setMode('adjust'); });
+    // セッション維持: 25分ごと & タブ復帰時に軽量ping(操作していなくても失効させない/先回り再認証)
+    setInterval(function(){ if(!document.hidden && SESSION) apiRaw_('touch',{}).catch(function(){}); }, 25*60*1000);
+    document.addEventListener('visibilitychange', function(){
+      if(document.hidden || !SESSION) return;
+      apiRaw_('touch',{}).then(function(j){ if(j && j.code==='AUTH') trySilentReauth_().then(function(ok){ if(!ok) handleAuthLost_(); }); });
+    });
     api('init', {}).then(onInit).catch(function(e){ setWhoRow('初期化に失敗: '+e, true); });
   }
   function onInit(d){
+    if (d && d.code==='AUTH') return;   // 失効時は handleAuthLost_ 側で再サインイン誘導(画面は保持)
     if (d.today) $('tdate').value = d.today;
     if (!d.connected){ CONNECTED=false; setWhoRow('Salesforce未接続: '+(d.message||''), true); updateSubmitState(); return; }
     CONNECTED = true;

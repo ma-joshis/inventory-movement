@@ -45,6 +45,9 @@
     .lrow .iname { font-size:13px; color:#38414f; flex:1; min-height:17px; overflow:hidden; text-overflow:ellipsis; }
     .qtybox { font-size:12px; color:var(--mut); display:flex; align-items:center; gap:6px; white-space:nowrap; }
     .qtybox .qtyinput { width:100px; text-align:right; }
+    .tabs { display:flex; gap:6px; border-bottom:1px solid var(--bd); }
+    .tab { border:none; background:none; padding:10px 16px; font-size:15px; font-weight:600; color:var(--mut); cursor:pointer; border-bottom:3px solid transparent; }
+    .tab.active { color:var(--pri2); border-bottom-color:var(--pri); }
     #video { width:100%; max-width:340px; border-radius:10px; background:#000; display:block; }
     .camwrap { position:relative; max-width:340px; margin:0 auto; }
     .camwrap .frame { position:absolute; top:50%; left:50%; width:70%; aspect-ratio:1; transform:translate(-50%,-50%); border:2px solid #fff; border-radius:10px; box-shadow:0 0 0 2000px rgba(0,0,0,.28); pointer-events:none; }
@@ -63,10 +66,14 @@
 
     <div id="app" hidden>
       <div class="card">
-        <div class="grid">
-          <div><label>移管元 在庫場所</label><select id="origin"></select></div>
-          <div><label>移管先 在庫場所</label><select id="dest"></select></div>
-          <div><label>移管日</label><input type="date" id="tdate"></div>
+        <div class="tabs">
+          <button class="tab active" id="tabMove" type="button">在庫移管</button>
+          <button class="tab" id="tabAdjust" type="button">引き落とし(消費)</button>
+        </div>
+        <div class="grid" style="margin-top:12px">
+          <div><label id="lblOrigin">移管元 在庫場所</label><select id="origin"></select></div>
+          <div id="destWrap"><label>移管先 在庫場所</label><select id="dest"></select></div>
+          <div><label id="lblDate">移管日</label><input type="date" id="tdate"></div>
           <div><label class="req">担当者(製造部)</label><select id="staff"><option value="">選択してください</option></select></div>
         </div>
         <div id="whoRow" class="muted" style="margin-top:10px;"></div>
@@ -110,10 +117,20 @@
     GOOGLE_CLIENT_ID: '952982265733-h7d6hldt8ggopotniaeocp53tv1h36vl.apps.googleusercontent.com'
   };
 
-  var idToken = '', LINES = [], INIT_ROWS = 10, CONNECTED = false, timers = {}, lastScan = { code:'', t:0 };
+  var idToken = '', LINES = [], INIT_ROWS = 10, CONNECTED = false, timers = {}, lastScan = { code:'', t:0 }, MODE = 'move';
   function $(id){ return document.getElementById(id); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);}); }
   function blankRow(){ return { itemId:'', code:'', name:'', qty:'', _cand:[] }; }
+  function setMode(m){
+    MODE = m;
+    $('tabMove').classList.toggle('active', m==='move');
+    $('tabAdjust').classList.toggle('active', m==='adjust');
+    $('destWrap').style.display = (m==='adjust') ? 'none' : '';
+    $('lblOrigin').textContent = (m==='adjust') ? '引き落とし元 在庫場所' : '移管元 在庫場所';
+    $('lblDate').textContent = (m==='adjust') ? '日付' : '移管日';
+    $('submitBtn').textContent = (m==='adjust') ? '決定(一括引き落とし)' : '決定(一括移管)';
+    updateSubmitState();
+  }
 
   /* ===== GAS API 呼び出し(text/plainでプリフライト回避) ===== */
   function api(action, extra){
@@ -159,6 +176,8 @@
     $('staff').addEventListener('change', updateSubmitState);
     $('camStart').addEventListener('click', startCam);
     $('camStop').addEventListener('click', stopCam);
+    $('tabMove').addEventListener('click', function(){ setMode('move'); });
+    $('tabAdjust').addEventListener('click', function(){ setMode('adjust'); });
     api('init', {}).then(onInit).catch(function(e){ setWhoRow('初期化に失敗: '+e, true); });
   }
   function onInit(d){
@@ -173,9 +192,9 @@
     var opts = '<option value="">選択してください</option>' + d.staff.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join('');
     if (d.myStaffId && d.staff.every(function(s){ return s.id!==d.myStaffId; })) opts += '<option value="'+d.myStaffId+'">'+esc(d.myName)+'</option>';
     $('staff').innerHTML = opts;
-    if (d.myStaffId){ $('staff').value=d.myStaffId; $('staff').disabled=true; setWhoRow('担当者(自動選択・固定): '+d.myName); }
+    if (d.myStaffId){ $('staff').value=d.myStaffId; $('staff').disabled=true; setWhoRow('担当者(自動選択・固定): '+d.myName + (d.myWorkPlace?('  ／ 勤務地: '+d.myWorkPlace):'')); }
     else { $('staff').disabled=false; setWhoRow('担当者が未登録です。手動で選択してください。'); }
-    updateSubmitState();
+    setMode('move');
   }
   function setWhoRow(m, ng){ var w=$('whoRow'); w.textContent=m; w.style.color = ng?'var(--ng)':'var(--mut)'; }
 
@@ -281,14 +300,22 @@
   function submit(){
     if(!$('staff').value){ setResult('担当者を選択してください。','ng'); return; }
     var v=validRows(); if(!v.length){ setResult('品目と数量のある行がありません。','ng'); return; }
-    if($('origin').value===$('dest').value){ setResult('移管元と移管先が同じです。','ng'); return; }
-    var payload={ header:{ originId:$('origin').value, destId:$('dest').value, date:$('tdate').value, staffId:$('staff').value }, lines: v.map(function(l){ return { itemId:l.itemId, qty:Number(l.qty) }; }) };
-    $('submitBtn').disabled=true; setResult('登録中…','');
-    api('submit',{payload:payload}).then(onSubmit).catch(function(e){ setResult('エラー: '+e,'ng'); updateSubmitState(); });
+    var lines = v.map(function(l){ return { itemId:l.itemId, qty:Number(l.qty) }; });
+    if(MODE==='adjust'){
+      $('submitBtn').disabled=true; setResult('引き落とし中…','');
+      var pa={ header:{ placeId:$('origin').value, date:$('tdate').value, staffId:$('staff').value }, lines:lines };
+      api('submitAdjust',{payload:pa}).then(function(res){ onSubmit(res,'引き落とし'); }).catch(function(e){ setResult('エラー: '+e,'ng'); updateSubmitState(); });
+    } else {
+      if($('origin').value===$('dest').value){ setResult('移管元と移管先が同じです。','ng'); return; }
+      $('submitBtn').disabled=true; setResult('登録中…','');
+      var pm={ header:{ originId:$('origin').value, destId:$('dest').value, date:$('tdate').value, staffId:$('staff').value }, lines:lines };
+      api('submit',{payload:pm}).then(function(res){ onSubmit(res,'移管'); }).catch(function(e){ setResult('エラー: '+e,'ng'); updateSubmitState(); });
+    }
   }
-  function onSubmit(res){
-    if(res.ok){ setResult('✓ '+res.count+'件を一括移管しました(在庫更新済み)。','ok'); LINES=[]; for(var i=0;i<INIT_ROWS;i++) LINES.push(blankRow()); renderRows(); }
-    else if(res.message){ setResult('登録できませんでした: '+res.message,'ng'); }
+  function onSubmit(res, label){
+    label = label || '移管';
+    if(res.ok){ setResult('✓ '+res.count+'件を一括'+label+'しました(在庫更新済み)。','ok'); LINES=[]; for(var i=0;i<INIT_ROWS;i++) LINES.push(blankRow()); renderRows(); }
+    else if(res.message){ setResult(label+'できませんでした: '+res.message,'ng'); }
     else { var m=(res.errors||[]).map(function(e){ return '行'+e.row+': '+(e.errors||[]).map(function(x){return x.message||JSON.stringify(x);}).join('; '); }); setResult('一部エラー: '+m.join(' / '),'ng'); }
     updateSubmitState();
   }

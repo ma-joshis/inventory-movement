@@ -65,16 +65,17 @@
     </div>
 
     <div id="app" hidden>
-      <div id="relogin" class="banner ng" hidden style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div id="relogin" class="banner ng" hidden>
         <span>サインインの有効期限が切れました。<b>入力内容はそのまま保持しています。</b>もう一度サインインしてください。</span>
-        <span id="rebtn" style="display:inline-block"></span>
+        <span id="rebtn" style="display:inline-block;margin-left:8px;vertical-align:middle"></span>
       </div>
       <div class="card">
         <div class="tabs">
           <button class="tab active" id="tabMove" type="button">在庫移管</button>
           <button class="tab" id="tabAdjust" type="button">引き落とし(消費)</button>
+          <button class="tab" id="tabCheck" type="button">在庫確認</button>
         </div>
-        <div class="grid" style="margin-top:12px">
+        <div class="grid" id="hdrGrid" style="margin-top:12px">
           <div><label id="lblOrigin">移管元 在庫場所</label><select id="origin"></select></div>
           <div id="destWrap"><label>移管先 在庫場所</label><select id="dest"></select></div>
           <div><label id="lblDate">移管日</label><input type="date" id="tdate"></div>
@@ -100,16 +101,26 @@
         </div>
         <div id="scanMsg" class="muted" style="margin-top:8px"></div>
         <div id="scanPick" style="display:none;border:1px solid var(--bd);border-radius:8px;margin-top:8px;overflow:hidden"></div>
-        <div class="muted" style="margin-top:6px;">かざすだけで一番上の空行へ自動追加(旧コードは自動で新コードへ変換)。手入力も下の表で可能。</div>
+        <div class="muted" id="scanHint" style="margin-top:6px;">かざすだけで一番上の空行へ自動追加(旧コードは自動で新コードへ変換)。手入力も下の表で可能。</div>
       </div>
 
-      <div class="card">
+      <div class="card" id="entryCard">
         <div id="rows"></div>
         <div class="bar">
           <div><button class="btn ghost" id="addBtn" type="button">＋ 行を追加(5行)</button> <span class="muted" id="summary" style="margin-left:8px;"></span></div>
           <div><button class="btn ghost" id="clearBtn" type="button">全クリア</button> <button class="btn primary" id="submitBtn" type="button" disabled>決定(一括移管)</button></div>
         </div>
         <div id="result" class="result"></div>
+      </div>
+
+      <div class="card" id="checkCard" style="display:none">
+        <label>在庫を確認する品目</label>
+        <div class="searchbox">
+          <input id="checkInput" autocomplete="off" placeholder="品目コード/名称で検索・またはカメラで読取">
+          <div class="suggest" id="checkSug"></div>
+        </div>
+        <div id="checkResult" style="margin-top:12px"></div>
+        <div class="muted" style="margin-top:6px;">現在の理論在庫(UM)を在庫場所ごとに表示します。読み取りのみで在庫は変更しません。</div>
       </div>
     </div>
   </div>
@@ -130,11 +141,22 @@
     MODE = m;
     $('tabMove').classList.toggle('active', m==='move');
     $('tabAdjust').classList.toggle('active', m==='adjust');
-    $('destWrap').style.display = (m==='adjust') ? 'none' : '';
-    $('lblOrigin').textContent = (m==='adjust') ? '引き落とし元 在庫場所' : '移管元 在庫場所';
-    $('lblDate').textContent = (m==='adjust') ? '日付' : '移管日';
-    $('submitBtn').textContent = (m==='adjust') ? '決定(一括引き落とし)' : '決定(一括移管)';
-    updateSubmitState();
+    $('tabCheck').classList.toggle('active', m==='check');
+    var isCheck = (m==='check');
+    // 在庫確認タブでは 入力系(ヘッダ項目・明細・決定)を隠し、照会カードを出す。カメラは共通で使う
+    $('hdrGrid').style.display  = isCheck ? 'none' : '';
+    $('whoRow').style.display   = isCheck ? 'none' : '';
+    $('entryCard').style.display= isCheck ? 'none' : '';
+    $('checkCard').style.display= isCheck ? '' : 'none';
+    $('scanHint').style.display = isCheck ? 'none' : '';
+    if(!isCheck){
+      $('destWrap').style.display = (m==='adjust') ? 'none' : '';
+      $('lblOrigin').textContent = (m==='adjust') ? '引き落とし元 在庫場所' : '移管元 在庫場所';
+      $('lblDate').textContent = (m==='adjust') ? '日付' : '移管日';
+      $('submitBtn').textContent = (m==='adjust') ? '決定(一括引き落とし)' : '決定(一括移管)';
+      updateSubmitState();
+    }
+    setScanMsg(isCheck ? 'カメラで品目を読み取ると在庫を照会します。' : '');
   }
 
   /* ===== セッション(GAS発行のHMACトークン。Google IDトークンの1時間制限を回避) ===== */
@@ -226,6 +248,8 @@
     $('camStop').addEventListener('click', stopCam);
     $('tabMove').addEventListener('click', function(){ setMode('move'); });
     $('tabAdjust').addEventListener('click', function(){ setMode('adjust'); });
+    $('tabCheck').addEventListener('click', function(){ setMode('check'); });
+    wireCheck();
     // セッション維持: 25分ごと & タブ復帰時に軽量ping(操作していなくても失効させない/先回り再認証)
     setInterval(function(){ if(!document.hidden && SESSION) apiRaw_('touch',{}).catch(function(){}); }, 25*60*1000);
     document.addEventListener('visibilitychange', function(){
@@ -346,10 +370,36 @@
   function setScanMsg(m){ $('scanMsg').textContent=m; }
   function beep(){ try{ var c=new (window.AudioContext||window.webkitAudioContext)(); var o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value=880; g.gain.value=0.05; o.start(); setTimeout(function(){o.stop();c.close();},110); }catch(e){} }
   function onScan(text){ text=(text||'').trim(); if(!text) return; var now=Date.now(); if(text===lastScan.code && (now-lastScan.t)<2500) return; lastScan={code:text,t:now}; beep(); setScanMsg('読取: '+text+' → 照合中…'); api('resolveCode',{code:text}).then(onResolved).catch(function(e){ setScanMsg('エラー: '+e); }); }
-  function onResolved(res){ hidePick(); if(res && res.ok===false && res.message){ setScanMsg(res.message); return; } if(!res||!res.items||!res.items.length){ setScanMsg('該当なし: '+((res&&res.scanned)||'')+'(未登録の可能性)'); return; } if(res.items.length===1){ var it=res.items[0]; fillTopEmpty(it); setScanMsg('✓ 追加: '+it.code+' '+it.name+(res.scanned!==it.code?'（旧 '+res.scanned+'）':'')); return; } setScanMsg('旧コード '+res.scanned+' は複数の新品目に対応。選択してください:'); showPick(res.items); }
+  function onResolved(res){ hidePick(); if(res && res.ok===false && res.message){ setScanMsg(res.message); return; } if(!res||!res.items||!res.items.length){ setScanMsg('該当なし: '+((res&&res.scanned)||'')+'(未登録の可能性)'); return; } if(res.items.length===1){ var it=res.items[0]; handlePicked(it); setScanMsg((MODE==='check'?'在庫照会: ':'✓ 追加: ')+it.code+' '+it.name+(res.scanned!==it.code?'（旧 '+res.scanned+'）':'')); return; } setScanMsg('旧コード '+res.scanned+' は複数の新品目に対応。選択してください:'); showPick(res.items); }
+  function handlePicked(it){ if(!it) return; if(MODE==='check'){ doCheck(it); } else { fillTopEmpty(it); } }
   function fillTopEmpty(it){ var i=-1; for(var k=0;k<LINES.length;k++){ if(!LINES[k].itemId){ i=k; break; } } if(i<0){ LINES.push(blankRow()); renderRows(); i=LINES.length-1; } LINES[i].itemId=it.id; LINES[i].code=it.code; LINES[i].name=it.name; if(!LINES[i].qty||Number(LINES[i].qty)<=0) LINES[i].qty=1; var inp=document.querySelector('input.iteminput[data-i="'+i+'"]'); if(inp) inp.value=it.code; var nc=nameCell(i); if(nc) nc.textContent=it.name; var q=document.querySelector('input.qtyinput[data-i="'+i+'"]'); if(q) q.value=LINES[i].qty; updateSummary(); updateSubmitState(); }
-  function showPick(items){ var el=$('scanPick'); el.innerHTML=items.map(function(it,k){ return '<div data-pk="'+k+'" style="padding:10px;border-top:1px solid #eef0f4;cursor:pointer"><span class="code">'+esc(it.code)+'</span>'+esc(it.name)+'</div>'; }).join(''); el.querySelectorAll('div[data-pk]').forEach(function(d){ d.addEventListener('click', function(){ var it=items[+d.dataset.pk]; fillTopEmpty(it); setScanMsg('✓ 追加: '+it.code+' '+it.name); hidePick(); }); }); el.style.display='block'; }
+  function showPick(items){ var el=$('scanPick'); el.innerHTML=items.map(function(it,k){ return '<div data-pk="'+k+'" style="padding:10px;border-top:1px solid #eef0f4;cursor:pointer"><span class="code">'+esc(it.code)+'</span>'+esc(it.name)+'</div>'; }).join(''); el.querySelectorAll('div[data-pk]').forEach(function(d){ d.addEventListener('click', function(){ var it=items[+d.dataset.pk]; handlePicked(it); setScanMsg((MODE==='check'?'在庫照会: ':'✓ 追加: ')+it.code+' '+it.name); hidePick(); }); }); el.style.display='block'; }
   function hidePick(){ $('scanPick').style.display='none'; }
+
+  /* ===== 在庫確認タブ ===== */
+  var checkTimer=null, checkCand=[];
+  function wireCheck(){
+    var inp=$('checkInput'); if(!inp) return;
+    inp.addEventListener('input', function(){ var t=(inp.value||'').trim(); if(!t){ hideCheckSug(); return; } if(checkTimer)clearTimeout(checkTimer); checkTimer=setTimeout(function(){ api('searchItems',{term:t}).then(function(res){ renderCheckSug(res.items||[]); }).catch(function(){ hideCheckSug(); }); },230); });
+    inp.addEventListener('focus', function(){ if((inp.value||'').trim() && checkCand.length){ $('checkSug').style.display='block'; } });
+    inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); if(checkCand.length) doCheck(checkCand[0]); } else if(e.key==='Escape'){ hideCheckSug(); } });
+    inp.addEventListener('blur', function(){ setTimeout(hideCheckSug,200); });
+  }
+  function renderCheckSug(items){ checkCand=items||[]; var s=$('checkSug'); if(!s) return; if(!items.length){ s.innerHTML='<div class="muted" style="cursor:default">該当なし</div>'; s.style.display='block'; return; } s.innerHTML=items.map(function(it,k){ return '<div data-ck="'+k+'"><span class="code">'+esc(it.code)+'</span>'+esc(it.name)+'</div>'; }).join(''); s.querySelectorAll('div[data-ck]').forEach(function(el){ el.addEventListener('mousedown', function(ev){ ev.preventDefault(); doCheck(items[+el.dataset.ck]); }); }); s.style.display='block'; }
+  function hideCheckSug(){ var s=$('checkSug'); if(s) s.style.display='none'; }
+  function doCheck(it){ if(!it) return; if(MODE!=='check') setMode('check'); var inp=$('checkInput'); if(inp) inp.value=it.code; hideCheckSug(); $('checkResult').innerHTML='<div class="muted">照会中…</div>'; api('getStock',{itemId:it.id}).then(function(res){ if(res && res.ok){ renderStock(it, res.rows||[]); } else { $('checkResult').innerHTML='<div class="banner ng">'+esc((res&&res.message)||'取得に失敗しました')+'</div>'; } }).catch(function(e){ $('checkResult').innerHTML='<div class="banner ng">エラー: '+esc(String(e))+'</div>'; }); }
+  function fmt(n){ if(n==null||n==='') return '-'; var x=Number(n); return isNaN(x)?esc(n):x.toLocaleString('ja-JP'); }
+  function renderStock(it, rows){
+    var el=$('checkResult');
+    var head='<div style="margin-bottom:8px"><span class="code">'+esc(it.code)+'</span>'+esc(it.name)+'</div>';
+    if(!rows.length){ el.innerHTML=head+'<div class="banner warn">在庫はありません(在庫数量0 または在庫レコード無し)。</div>'; return; }
+    var total=rows.reduce(function(a,r){return a+(Number(r.qty)||0);},0);
+    var unit=rows[0].unit||'';
+    var body=rows.map(function(r){ return '<tr><td>'+esc(r.place)+'</td><td style="text-align:right">'+fmt(r.qty)+'</td><td style="text-align:right">'+fmt(r.avail)+'</td><td class="iname">'+esc(r.lot||'')+'</td></tr>'; }).join('');
+    el.innerHTML=head
+      +'<div style="margin:4px 0 8px"><b>合計 '+fmt(total)+' '+esc(unit)+'</b> <span class="muted">('+rows.length+'ヶ所)</span></div>'
+      +'<div style="overflow-x:auto"><table><thead><tr><th>在庫場所</th><th style="text-align:right">在庫数量</th><th style="text-align:right">有効在庫</th><th>ロット</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+  }
 
   /* ===== 送信 ===== */
   function submit(){

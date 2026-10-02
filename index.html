@@ -327,6 +327,7 @@
     // 仕訳区分(引き落とし用)。前回この端末で選んだ区分を復元
     $('journal').innerHTML = '<option value="">選択してください</option>' + (d.journalDivs||[]).map(opt).join('');
     try{ var lastJd=localStorage.getItem(JD_KEY); if(lastJd && (d.journalDivs||[]).some(function(j){ return j.id===lastJd; })) $('journal').value=lastJd; }catch(e){}
+    if(!$('journal').value){ var defJd=(d.journalDivs||[]).filter(function(j){ return j.name==='材料引き落とし'; })[0]; if(defJd) $('journal').value=defJd.id; }   // 既定=材料引き落とし
     // 棚卸: 在庫場所プルダウン + 既定(勤務地の在庫置場) + カウント担当者
     MYINFO = { staffId:d.myStaffId||'', name:d.myName||'', workPlace:d.myWorkPlace||'' };
     $('countPlace').innerHTML = d.stockPlaces.map(opt).join('');

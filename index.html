@@ -48,13 +48,40 @@
     .lrow .iname:empty { display:none; }
     .qtybox { font-size:16px; color:var(--mut); display:flex; align-items:center; gap:6px; white-space:nowrap; }
     .qtybox .qtyinput { width:140px; min-height:56px; text-align:right; font-size:26px; font-weight:700; padding:8px 12px; }
-    .tabs { display:flex; gap:6px; border-bottom:1px solid var(--bd); }
+    .tabs { display:flex; flex-wrap:wrap; gap:6px; border-bottom:1px solid var(--bd); }
     .tab { border:none; background:none; padding:12px 16px; font-size:17px; font-weight:600; color:var(--mut); cursor:pointer; border-bottom:3px solid transparent; }
     .tab.active { color:var(--pri2); border-bottom-color:var(--pri); }
     #video { width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000; display:block; }
     .camwrap { position:relative; width:100%; max-width:300px; aspect-ratio:1/1; margin:0 auto; overflow:hidden; border-radius:10px; }
     .camwrap .frame { position:absolute; top:50%; left:50%; width:80%; aspect-ratio:1; transform:translate(-50%,-50%); border:2px solid #fff; border-radius:10px; box-shadow:0 0 0 2000px rgba(0,0,0,.28); pointer-events:none; }
     #signin { text-align:center; padding:40px 16px; }
+    /* 棚卸表・受払表 */
+    .rp-area { margin-top:12px; overflow-x:auto; }
+    .rp-head { display:flex; flex-wrap:wrap; gap:4px 16px; align-items:baseline; margin:4px 0 8px; }
+    .rp-head b { font-size:18px; } .rp-head span { color:var(--mut); font-size:14px; }
+    .rp-head .rp-gname { color:var(--pri2); font-weight:700; font-size:16px; }
+    .rp-table { border:1px solid #c9ced8; }
+    .rp-table th { background:#eef2f8; color:#38414f; font-size:13px; border:1px solid #c9ced8; text-align:center; white-space:nowrap; padding:6px; }
+    .rp-table td { border:1px solid #dde1e8; font-size:15px; padding:6px 8px; }
+    .rp-table td.r { text-align:right; white-space:nowrap; } .rp-table td.b { font-weight:700; }
+    .rp-table td.rp-write { min-width:80px; background:#fffef2; }
+    .rp-group { margin-bottom:22px; }
+    .btn.rp-lg { padding:6px 10px; font-size:13px; }
+    .lg-sum { display:flex; flex-wrap:wrap; gap:6px 18px; margin:0 0 10px; font-size:15px; color:var(--mut); } .lg-sum b { color:#1c2430; }
+    @media print {
+      body { background:#fff; font-size:11px; }
+      body > header, #relogin, #app > .card:not(#reportCard), .rp-ctrl, .noprint { display:none !important; }
+      .wrap { max-width:none; padding:0; }
+      #reportCard { border:none; padding:0; margin:0; }
+      .rp-area { overflow:visible; margin:0; }
+      .rp-head b { font-size:14px; } .rp-head span { font-size:10px; } .rp-head .rp-gname { font-size:12px; }
+      .rp-table th { font-size:10px; padding:3px 4px; background:#eef2f8 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .rp-table td { font-size:11px; padding:4px 5px; }
+      .rp-table td.rp-write { min-width:60px; background:none; }
+      .rp-group + .rp-group { break-before:page; }
+      tr { break-inside:avoid; }
+      .lg-sum { font-size:11px; }
+    }
   </style>
 </head>
 <body>
@@ -81,6 +108,7 @@
           <button class="tab" id="tabAdjust" type="button">引き落とし(消費)</button>
           <button class="tab" id="tabCheck" type="button">在庫確認</button>
           <button class="tab" id="tabCount" type="button">棚卸</button>
+          <button class="tab" id="tabReport" type="button">棚卸表</button>
         </div>
         <div class="grid" id="hdrGrid" style="margin-top:12px">
           <div><label id="lblOrigin">移管元 在庫場所</label><select id="origin"></select></div>
@@ -92,7 +120,7 @@
         <div id="whoRow" class="muted" style="margin-top:10px;"></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="scanCard">
         <div class="bar" style="margin-top:0">
           <b>QR / バーコードをかざして読取(ライブ)</b>
           <div>
@@ -139,6 +167,25 @@
         </div>
       </div>
 
+      <div class="card" id="reportCard" style="display:none">
+        <div class="grid rp-ctrl">
+          <div><label>種類</label><select id="rpKind"><option value="katazai">形材</option><option value="kansei">完成品</option></select></div>
+          <div><label>開始日</label><input type="date" id="rpFrom"></div>
+          <div><label>終了日</label><input type="date" id="rpTo"></div>
+          <div style="align-self:end"><button class="btn primary" id="rpLoad" type="button" style="width:100%">表示</button></div>
+        </div>
+        <div class="bar rp-ctrl">
+          <div class="muted" id="rpInfo">本社工場_在庫置場で、期間内に入出庫があった品目を表示します。</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <select id="rpGroup" style="width:auto;display:none"></select>
+            <button class="btn ghost" id="rpXlsx" type="button" disabled>Excel</button>
+            <button class="btn ghost" id="rpPrint" type="button" disabled>印刷</button>
+          </div>
+        </div>
+        <div id="rpArea" class="rp-area"></div>
+        <div id="lgArea" class="rp-area" style="display:none"></div>
+      </div>
+
       <div class="card" id="countCard" style="display:none">
         <div class="searchbox">
           <input id="countInput" autocomplete="off" placeholder="原材料の品目コード/名称で検索・またはカメラで読取">
@@ -172,7 +219,11 @@
     $('tabAdjust').classList.toggle('active', m==='adjust');
     $('tabCheck').classList.toggle('active', m==='check');
     $('tabCount').classList.toggle('active', m==='count');
-    var isEntry=(m==='move'||m==='adjust'), isCheck=(m==='check'), isCount=(m==='count');
+    $('tabReport').classList.toggle('active', m==='report');
+    var isEntry=(m==='move'||m==='adjust'), isCheck=(m==='check'), isCount=(m==='count'), isReport=(m==='report');
+    $('scanCard').style.display   = isReport ? 'none' : '';
+    $('reportCard').style.display = isReport ? '' : 'none';
+    if(isReport && !$('camStop').hidden){ try{ stopCam(); }catch(e){} }
     // タブごとに表示を切替(カメラの読取カードは全モード共通で使う)
     $('hdrGrid').style.display   = isEntry ? '' : 'none';
     $('whoRow').style.display    = isEntry ? '' : 'none';
@@ -190,6 +241,116 @@
       updateSubmitState();
     }
     setScanMsg(isCheck ? 'カメラで品目を読み取ると在庫を照会します。' : (isCount ? 'カメラで品目を読み取るとカウントに追加します。' : ''));
+  }
+
+
+  /* ===== 棚卸表(週次: 形材 / 完成品)・受払表 ===== */
+  var RP = null;   // 直近に表示した棚卸表データ
+  function ymdLocal_(d){ var z=function(n){ return (n<10?'0':'')+n; }; return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()); }
+  function md_(ymd){ var p=String(ymd).split('-'); return (+p[1])+'月'+(+p[2])+'日'; }
+  function slash_(ymd){ return String(ymd||'').replace(/-/g,'/'); }
+  function nz_(v){ return (v==null || v==='' || Number(v)===0) ? '' : fmt(v); }   // 0は空欄(紙で見やすく)
+  function numOrStr_(v){ var x=parseInt(v,10); return isNaN(x) ? (v||null) : x; }
+  function setPageSize_(o){ var st=$('pageStyle'); if(!st){ st=document.createElement('style'); st.id='pageStyle'; document.head.appendChild(st); } st.textContent='@page { size: A4 '+o+'; margin: 10mm; }'; }
+  function wireReport(){
+    var t=new Date(), f=new Date(); f.setDate(f.getDate()-6);   // 既定: 直近7日間(今日を含む)
+    $('rpTo').value=ymdLocal_(t); $('rpFrom').value=ymdLocal_(f);
+    $('rpLoad').addEventListener('click', loadReport);
+    $('rpKind').addEventListener('change', function(){ RP=null; $('rpArea').innerHTML=''; $('rpGroup').style.display='none'; $('rpXlsx').disabled=true; $('rpPrint').disabled=true; showLedger_(false); $('rpInfo').textContent='本社工場_在庫置場で、期間内に入出庫があった品目を表示します。'; });
+    $('rpGroup').addEventListener('change', renderReport);
+    $('rpXlsx').addEventListener('click', downloadXlsx);
+    $('rpPrint').addEventListener('click', function(){ setPageSize_(RP && RP.kind==='kansei' ? 'landscape' : 'portrait'); window.print(); });
+  }
+  function loadReport(){
+    var from=$('rpFrom').value, to=$('rpTo').value;
+    if(!from || !to){ $('rpInfo').textContent='開始日と終了日を指定してください。'; return; }
+    if(from>to){ $('rpInfo').textContent='開始日が終了日より後になっています。'; return; }
+    showLedger_(false);
+    $('rpLoad').disabled=true; $('rpInfo').textContent='集計中…'; $('rpArea').innerHTML='';
+    api('stocktakeReport',{kind:$('rpKind').value, from:from, to:to}).then(function(res){
+      $('rpLoad').disabled=false;
+      if(!res || !res.ok){ $('rpInfo').textContent='エラー: '+((res&&res.message)||'取得に失敗しました'); return; }
+      RP=res;
+      var groups=[];
+      if(res.kind==='kansei') res.rows.forEach(function(r){ if(groups.indexOf(r.group)<0) groups.push(r.group); });
+      $('rpGroup').innerHTML='<option value="">すべての商品</option>'+groups.map(function(g){ return '<option>'+esc(g)+'</option>'; }).join('');
+      $('rpGroup').style.display = res.kind==='kansei' ? '' : 'none';
+      $('rpXlsx').disabled = !res.rows.length; $('rpPrint').disabled = !res.rows.length;
+      $('rpInfo').textContent = res.rows.length+'品目 ／ 期間 '+slash_(res.from)+'〜'+slash_(res.to)+'(入出庫があった品目のみ)';
+      renderReport();
+    }).catch(function(e){ $('rpLoad').disabled=false; $('rpInfo').textContent='エラー: '+e; });
+  }
+  function rpTitle_(){ return (RP.kind==='kansei'?'完成品':'形材')+' 棚卸表(' + RP.place + ')'; }
+  function rpMeta_(){ return '期間 '+slash_(RP.from)+'〜'+slash_(RP.to)+' ／ 出力 '+RP.generatedAt; }
+  function rpHead_(gname){ return '<div class="rp-head"><b>'+esc(rpTitle_())+'</b>'+(gname?'<span class="rp-gname">商品: '+esc(gname)+'</span>':'')+'<span>'+esc(rpMeta_())+'</span></div>'; }
+  function renderReport(){
+    if(!RP){ $('rpArea').innerHTML=''; return; }
+    if(!RP.rows.length){ $('rpArea').innerHTML=rpHead_('')+'<div class="banner warn">期間内に入出庫があった品目はありません。</div>'; return; }
+    var lg=function(r){ return '<td class="noprint"><button class="btn ghost rp-lg" type="button" data-lg="'+esc(r.itemId)+'">受払</button></td>'; };
+    if(RP.kind==='katazai'){
+      var body=RP.rows.map(function(r){
+        return '<tr><td>'+esc(r.area)+'</td><td class="r">'+esc(r.num)+'</td><td class="code">'+esc(r.code)+'</td><td>'+esc(r.name)+'</td>'
+          +'<td class="rp-write"></td><td class="r">'+fmt(r.prevOut)+'</td><td class="r">'+fmt(r.tate)+'</td><td class="r b">'+fmt(r.stock)+'</td>'+lg(r)+'</tr>';
+      }).join('');
+      $('rpArea').innerHTML=rpHead_('')+'<table class="rp-table"><thead><tr><th>エリア</th><th>連番</th><th>コード</th><th>商品名</th><th>棚卸実数</th><th>'+esc(md_(RP.prevDay))+'<br>出庫</th><th>立て数</th><th>管理残数</th><th class="noprint"></th></tr></thead><tbody>'+body+'</tbody></table>';
+    } else {
+      var sel=$('rpGroup').value, groups={}, order=[];
+      RP.rows.forEach(function(r){ if(sel && r.group!==sel) return; if(!groups[r.group]){ groups[r.group]=[]; order.push(r.group); } groups[r.group].push(r); });
+      $('rpArea').innerHTML=order.map(function(g){
+        var body=groups[g].map(function(r){
+          return '<tr><td class="code">'+esc(r.code)+'</td><td>'+esc(r.name1)+'</td><td>'+esc(r.name2)+'</td><td class="r">'+nz_(r.safety)+'</td>'
+            +'<td class="r">'+nz_(r.inQty)+'</td><td class="r">'+nz_(r.plan)+'</td><td class="r">'+nz_(r.outQty)+'</td><td class="rp-write"></td><td class="r b">'+fmt(r.stock)+'</td>'+lg(r)+'</tr>';
+        }).join('');
+        return '<section class="rp-group">'+rpHead_(g)+'<table class="rp-table"><thead><tr><th>品目コード</th><th>品目名1</th><th>品目名2</th><th>基準在庫数</th><th>入庫</th><th>入庫予定</th><th>出庫/調整</th><th>実在庫</th><th>システム在庫</th><th class="noprint"></th></tr></thead><tbody>'+body+'</tbody></table></section>';
+      }).join('');
+    }
+    $('rpArea').querySelectorAll('button[data-lg]').forEach(function(b){ b.addEventListener('click', function(){ openLedger(b.dataset.lg); }); });
+  }
+  function showLedger_(on){ $('lgArea').style.display=on?'':'none'; $('rpArea').style.display=on?'none':''; }
+  function openLedger(itemId){
+    if(!RP) return;
+    showLedger_(true); $('lgArea').innerHTML='<div class="muted">受払表を取得中…</div>';
+    var back=function(){ showLedger_(false); };
+    api('itemLedger',{itemId:itemId, from:RP.from, to:RP.to}).then(function(res){
+      if(!res || !res.ok){ $('lgArea').innerHTML='<div class="banner ng">'+esc((res&&res.message)||'取得に失敗しました')+'</div><button class="btn ghost" id="lgBack" type="button">← 一覧へ戻る</button>'; $('lgBack').onclick=back; return; }
+      var it=res.item;
+      var body=res.rows.map(function(r){ return '<tr><td>'+esc(r.date)+'</td><td>'+esc(r.cls)+'</td><td class="r">'+nz_(r.inQty)+'</td><td class="r">'+nz_(r.outQty)+'</td><td class="r b">'+fmt(r.bal)+'</td><td>'+esc(r.partner)+'</td></tr>'; }).join('');
+      $('lgArea').innerHTML='<div class="bar noprint" style="margin:0 0 10px"><button class="btn ghost" id="lgBack" type="button">← 一覧へ戻る</button><button class="btn ghost" id="lgPrint" type="button">受払表を印刷</button></div>'
+        +'<div class="rp-head"><b>受払表 '+esc(it.code)+' '+esc(it.name)+'</b><span>'+esc(res.place)+' ／ 期間 '+slash_(res.from)+'〜'+slash_(res.to)+'</span></div>'
+        +'<div class="lg-sum"><span>期首在庫 <b>'+fmt(res.startBalance)+'</b></span><span>基準在庫数 <b>'+(it.safety==null?'-':fmt(it.safety))+'</b></span><span>入庫計 <b>'+fmt(res.totalIn)+'</b></span><span>出庫計 <b>'+fmt(res.totalOut)+'</b></span><span>期末在庫 <b>'+fmt(res.endBalance)+'</b></span><span>現在庫 <b>'+fmt(res.current)+'</b></span></div>'
+        +(res.rows.length ? '<table class="rp-table"><thead><tr><th>日付</th><th>区分</th><th>入庫実績</th><th>出庫実績</th><th>現在庫数</th><th>入出庫先</th></tr></thead><tbody>'+body+'</tbody></table>'
+                          : '<div class="banner warn">期間内の入出庫はありません。</div>');
+      $('lgBack').onclick=back;
+      $('lgPrint').onclick=function(){ setPageSize_('portrait'); window.print(); };
+    }).catch(function(e){ $('lgArea').innerHTML='<div class="banner ng">エラー: '+esc(e)+'</div><button class="btn ghost" id="lgBack" type="button">← 一覧へ戻る</button>'; $('lgBack').onclick=back; });
+  }
+  function loadXlsx_(){
+    return new Promise(function(resolve, reject){
+      if(window.XLSX) return resolve();
+      var s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.onload=function(){ resolve(); }; s.onerror=function(){ reject('Excel出力ライブラリを読み込めませんでした'); };
+      document.head.appendChild(s);
+    });
+  }
+  function downloadXlsx(){
+    if(!RP || !RP.rows.length) return;
+    $('rpXlsx').disabled=true;
+    loadXlsx_().then(function(){
+      var aoa=[[rpTitle_()],[rpMeta_()],[]], cols;
+      if(RP.kind==='katazai'){
+        aoa.push(['エリア','連番','コード','商品名','棚卸実数',md_(RP.prevDay)+' 出庫','立て数','管理残数']);
+        RP.rows.forEach(function(r){ aoa.push([r.area, numOrStr_(r.num), r.code, r.name, null, r.prevOut, r.tate, r.stock]); });
+        cols=[8,6,10,46,10,12,8,10];
+      } else {
+        var sel=$('rpGroup').value;
+        aoa.push(['商品分類','小分類','品目コード','品目名1','品目名2','基準在庫数','入庫','入庫予定','出庫/調整','実在庫','システム在庫']);
+        RP.rows.forEach(function(r){ if(sel && r.group!==sel) return; aoa.push([r.group, r.sub, r.code, r.name1, r.name2, r.safety==null?null:r.safety, r.inQty||null, r.plan||null, r.outQty||null, null, r.stock]); });
+        cols=[12,14,12,38,26,10,8,9,10,9,11];
+      }
+      var ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=cols.map(function(w){ return {wch:w}; });
+      var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, RP.kind==='kansei'?'完成品棚卸':'形材棚卸');
+      XLSX.writeFile(wb, (RP.kind==='kansei'?'完成品':'形材')+'棚卸表_'+RP.from.replace(/-/g,'')+'-'+RP.to.replace(/-/g,'')+'.xlsx');
+    }).catch(function(e){ $('rpInfo').textContent='エラー: '+e; }).then(function(){ $('rpXlsx').disabled=false; });
   }
 
   /* ===== セッション(GAS発行のHMACトークン。Google IDトークンの1時間制限を回避) ===== */
@@ -302,6 +463,8 @@
     $('tabAdjust').addEventListener('click', function(){ setMode('adjust'); });
     $('tabCheck').addEventListener('click', function(){ setMode('check'); });
     $('tabCount').addEventListener('click', function(){ setMode('count'); });
+    $('tabReport').addEventListener('click', function(){ setMode('report'); });
+    wireReport();
     wireCheck(); wireCount();
     $('switchUser').addEventListener('click', switchUser_);
     $('blindToggle').addEventListener('change', renderCounts);

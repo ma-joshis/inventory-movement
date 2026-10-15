@@ -55,6 +55,19 @@
     .camwrap { position:relative; width:100%; max-width:300px; aspect-ratio:1/1; margin:0 auto; overflow:hidden; border-radius:10px; }
     .camwrap .frame { position:absolute; top:50%; left:50%; width:80%; aspect-ratio:1; transform:translate(-50%,-50%); border:2px solid #fff; border-radius:10px; box-shadow:0 0 0 2000px rgba(0,0,0,.28); pointer-events:none; }
     #signin { text-align:center; padding:40px 16px; }
+    /* 発注照会 */
+    .po-search { display:flex; gap:8px; align-items:stretch; }
+    .po-search input { flex:1; }
+    .po-item { border:1px solid var(--bd); border-radius:10px; padding:12px 14px; margin-bottom:10px; background:#fff; }
+    .po-code { display:inline-flex; align-items:center; gap:12px; font-size:30px; font-weight:800; letter-spacing:.5px; color:var(--pri2); background:#eaf1fd; border:2px solid #b9cdf3; border-radius:10px; padding:10px 18px; cursor:pointer; font-family:inherit; }
+    .po-code:active { transform:scale(.98); background:#d9e6fb; }
+    .po-code .po-copy { font-size:14px; font-weight:600; color:var(--pri); letter-spacing:0; }
+    .po-name { font-size:18px; font-weight:600; margin:10px 0 6px; overflow-wrap:anywhere; }
+    .po-meta { display:flex; flex-wrap:wrap; gap:4px 16px; font-size:14px; color:var(--mut); }
+    .po-meta b { color:#1c2430; }
+    #toast { position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:#1c2430; color:#fff; padding:12px 20px; border-radius:24px; font-size:16px; font-weight:600; z-index:100; opacity:0; transition:opacity .2s; pointer-events:none; max-width:90vw; text-align:center; }
+    #toast.show { opacity:.95; }
+    @media print { #toast { display:none; } }
     /* 棚卸表・受払表 */
     .rp-area { margin-top:12px; overflow-x:auto; }
     .rp-head { display:flex; flex-wrap:wrap; gap:4px 16px; align-items:baseline; margin:4px 0 8px; }
@@ -110,8 +123,9 @@
           <button class="tab active" id="tabMove" type="button">在庫移管</button>
           <button class="tab" id="tabAdjust" type="button">引き落とし(消費)</button>
           <button class="tab" id="tabCheck" type="button">在庫確認</button>
-          <button class="tab" id="tabCount" type="button">棚卸</button>
           <button class="tab" id="tabReport" type="button">棚卸表</button>
+          <button class="tab" id="tabCount" type="button">棚卸</button>
+          <button class="tab" id="tabPo" type="button">発注照会</button>
         </div>
         <div class="grid" id="hdrGrid" style="margin-top:12px">
           <div><label id="lblOrigin">移管元 在庫場所</label><select id="origin"></select></div>
@@ -168,6 +182,16 @@
           <div><label>カウント担当者</label><div id="counterName" class="muted" style="padding-top:8px">-</div></div>
           <div><label>カウント方式</label><label style="font-weight:400;display:flex;align-items:center;gap:8px;padding-top:6px"><input type="checkbox" id="blindToggle" checked style="width:auto"> ブラインド(システム在庫を隠す)</label></div>
         </div>
+      </div>
+
+      <div class="card" id="poCard" style="display:none">
+        <label for="poInput">発注明細番号(または発注番号)</label>
+        <div class="po-search">
+          <input type="text" id="poInput" autocomplete="off" enterkeyhint="search" placeholder="例: 392 / POD-0000392 / PO-00000289">
+          <button class="btn primary" id="poBtn" type="button">検索</button>
+        </div>
+        <div class="muted" style="margin-top:6px">番号の数字だけでも探せます。出てきた品目コードをタップするとコピーできます。</div>
+        <div id="poResult" style="margin-top:12px"></div>
       </div>
 
       <div class="card" id="reportCard" style="display:none">
@@ -227,10 +251,12 @@
     $('tabCheck').classList.toggle('active', m==='check');
     $('tabCount').classList.toggle('active', m==='count');
     $('tabReport').classList.toggle('active', m==='report');
-    var isEntry=(m==='move'||m==='adjust'), isCheck=(m==='check'), isCount=(m==='count'), isReport=(m==='report');
-    $('scanCard').style.display   = isReport ? 'none' : '';
+    $('tabPo').classList.toggle('active', m==='po');
+    var isEntry=(m==='move'||m==='adjust'), isCheck=(m==='check'), isCount=(m==='count'), isReport=(m==='report'), isPo=(m==='po');
+    $('scanCard').style.display   = (isReport||isPo) ? 'none' : '';
     $('reportCard').style.display = isReport ? '' : 'none';
-    if(isReport && !$('camStop').hidden){ try{ stopCam(); }catch(e){} }
+    $('poCard').style.display     = isPo ? '' : 'none';
+    if((isReport||isPo) && !$('camStop').hidden){ try{ stopCam(); }catch(e){} }
     // タブごとに表示を切替(カメラの読取カードは全モード共通で使う)
     $('hdrGrid').style.display   = isEntry ? '' : 'none';
     $('whoRow').style.display    = isEntry ? '' : 'none';
@@ -480,6 +506,55 @@
     }).catch(function(e){ $('tgMsg').className='result ng'; $('tgMsg').textContent='エラー: '+e; updateTgCount_(); });
   }
 
+  /* ===== 発注照会(発注明細番号 → 品目コード。品目コードはタップでコピー) ===== */
+  function wirePo(){
+    $('poBtn').addEventListener('click', lookupPo);
+    $('poInput').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); lookupPo(); } });
+  }
+  function lookupPo(){
+    var q=($('poInput').value||'').trim();
+    if(!q){ $('poResult').innerHTML='<div class="banner warn">発注明細番号を入力してください。</div>'; return; }
+    $('poBtn').disabled=true; $('poResult').innerHTML='<div class="muted">検索中…</div>';
+    api('purchaseDetailLookup',{no:q}).then(function(res){
+      $('poBtn').disabled=false;
+      if(!res || !res.ok){ $('poResult').innerHTML='<div class="banner ng">'+esc((res&&res.message)||'検索に失敗しました')+'</div>'; return; }
+      if(!res.rows.length){ $('poResult').innerHTML='<div class="banner warn">「'+esc(q)+'」に該当する発注明細はありません。番号をもう一度確認してください。</div>'; return; }
+      var note = res.mode==='partial' ? '<div class="banner warn">完全に一致する番号が無いため、番号を含む発注明細を表示しています。</div>'
+               : res.mode==='po' ? '<div class="muted" style="margin-bottom:8px">発注 '+esc(res.rows[0].poNo)+' の明細 '+res.rows.length+'件</div>' : '';
+      $('poResult').innerHTML = note + res.rows.map(function(r){
+        return '<div class="po-item">'
+          +'<div class="muted" style="margin-bottom:8px">発注明細 <b style="color:#1c2430;font-size:16px">'+esc(r.no)+'</b></div>'
+          +(r.code ? '<button type="button" class="po-code" data-code="'+esc(r.code)+'">'+esc(r.code)+'<span class="po-copy">タップでコピー</span></button>'
+                   : '<div class="banner warn">この発注明細には品目が登録されていません。</div>')
+          +'<div class="po-name">'+esc(r.name)+'</div>'
+          +'<div class="po-meta"><span>発注 <b>'+esc(r.poNo)+'</b></span>'
+            +(r.supplier ? '<span>仕入先 <b>'+esc(r.supplier)+'</b></span>' : '')
+            +'<span>数量 <b>'+fmt(r.qty)+(r.unit?' '+esc(r.unit):'')+'</b></span>'
+            +(r.remaining!=null ? '<span>残入荷 <b>'+fmt(r.remaining)+'</b></span>' : '')
+            +(r.due ? '<span>納期 <b>'+esc(String(r.due).replace(/-/g,'/'))+'</b></span>' : '')
+            +(r.status ? '<span>'+esc(r.status)+'</span>' : '')
+          +'</div></div>';
+      }).join('');
+      $('poResult').querySelectorAll('button.po-code').forEach(function(b){ b.addEventListener('click', function(){ copyText_(b.dataset.code); }); });
+    }).catch(function(e){ $('poBtn').disabled=false; $('poResult').innerHTML='<div class="banner ng">エラー: '+esc(e)+'</div>'; });
+  }
+  function copyText_(t){
+    var done=function(){ toast_('コピーしました: '+t); }, fail=function(){ toast_('コピーできませんでした。コードを長押しして選択してください'); };
+    if(navigator.clipboard && window.isSecureContext){
+      navigator.clipboard.writeText(t).then(done, function(){ legacyCopy_(t) ? done() : fail(); });
+    } else { legacyCopy_(t) ? done() : fail(); }
+  }
+  function legacyCopy_(t){   // 古い端末向け(clipboard API が使えない場合)
+    try{
+      var ta=document.createElement('textarea'); ta.value=t; ta.setAttribute('readonly','');
+      ta.style.position='fixed'; ta.style.top='-1000px'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, t.length);
+      var ok=document.execCommand('copy'); document.body.removeChild(ta); return ok;
+    }catch(e){ return false; }
+  }
+  var toastTimer=null;
+  function toast_(m){ var el=$('toast'); el.textContent=m; el.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(function(){ el.classList.remove('show'); }, 1800); }
+
   /* ===== セッション(GAS発行のHMACトークン。Google IDトークンの1時間制限を回避) ===== */
   function b64urlToJson_(b64){ try{ var p=b64.replace(/-/g,'+').replace(/_/g,'/'); while(p.length%4)p+='='; return JSON.parse(decodeURIComponent(atob(p).split('').map(function(c){return '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2);}).join(''))); }catch(e){ return null; } }
   function parseSession_(tok){ return tok ? b64urlToJson_(tok.split('.')[0]) : null; }
@@ -592,6 +667,8 @@
     $('tabCheck').addEventListener('click', function(){ setMode('check'); });
     $('tabCount').addEventListener('click', function(){ setMode('count'); });
     $('tabReport').addEventListener('click', function(){ setMode('report'); });
+    $('tabPo').addEventListener('click', function(){ setMode('po'); setTimeout(function(){ $('poInput').focus(); }, 50); });
+    wirePo();
     wireReport();
     wireCheck(); wireCount();
     $('switchUser').addEventListener('click', switchUser_);
@@ -842,5 +919,6 @@
   }
   function setResult(m,c){ var r=$('result'); r.textContent=m; r.className='result '+(c||''); }
 </script>
+  <div id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>

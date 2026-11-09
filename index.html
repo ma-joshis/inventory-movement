@@ -11,6 +11,9 @@
     * { box-sizing:border-box; }
     body { margin:0; font-size:16px; font-family:"Segoe UI","Hiragino Kaku Gothic ProN",Meiryo,system-ui,sans-serif; color:#1c2430; background:var(--bg); }
     header { background:var(--pri2); color:#fff; padding:12px 16px; font-size:18px; font-weight:600; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:20; }
+    .btn.login-btn { font-size:19px; padding:14px 28px; border-radius:999px; }
+    .btn.login-btn-sm { font-size:15px; padding:8px 16px; border-radius:999px; }
+    header .env-badge { background:#f59e0b; color:#1c2430; font-size:12px; font-weight:700; border-radius:4px; padding:2px 6px; vertical-align:middle; }
     header .who { font-size:14px; font-weight:400; opacity:.9; }
     header #switchUser { background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.4); border-radius:6px; padding:7px 12px; font-size:14px; font-weight:600; cursor:pointer; white-space:nowrap; }
     header #switchUser:hover { background:rgba(255,255,255,.28); }
@@ -48,19 +51,117 @@
     .lrow .iname:empty { display:none; }
     .qtybox { font-size:16px; color:var(--mut); display:flex; align-items:center; gap:6px; white-space:nowrap; }
     .qtybox .qtyinput { width:140px; min-height:56px; text-align:right; font-size:26px; font-weight:700; padding:8px 12px; }
-    .tabs { display:flex; flex-wrap:wrap; gap:6px; border-bottom:1px solid var(--bd); }
-    .tab { border:none; background:none; padding:12px 16px; font-size:17px; font-weight:600; color:var(--mut); cursor:pointer; border-bottom:3px solid transparent; }
-    .tab.active { color:var(--pri2); border-bottom-color:var(--pri); }
-    /* スマホ: タブは場所を取るので1行のプルダウンに切替 */
-    .tab-select { display:none; font-weight:700; color:var(--pri2); border:2px solid var(--pri); background:#f3f7ff; }
+    /* メニュー: 入力フォーム(白いカード)と見分けがつくよう、濃い紺の帯にボタンを並べる */
+    .menu { background:#123a75; border-radius:12px; padding:8px 10px 10px; margin-bottom:14px; box-shadow:0 2px 8px rgba(15,40,90,.25); }
+    .menu-lbl { color:#b9cdf0; font-size:12px; font-weight:700; letter-spacing:.15em; margin:0 0 6px 2px; }
+    .menu .tabs { display:grid; grid-template-columns:repeat(auto-fill,minmax(112px,1fr)); gap:6px; }
+    .menu .tab { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-height:58px; background:rgba(255,255,255,.08); color:#e6eefc;
+                 border:1px solid rgba(255,255,255,.2); border-radius:10px; padding:6px 4px; font-size:15px; font-weight:600; cursor:pointer; line-height:1.2; text-align:center; }
+    .menu .tab .ti { font-size:20px; line-height:1; }
+    .menu .tab:hover { background:rgba(255,255,255,.18); }
+    .menu .tab.active { background:#fff; color:#0f2f63; border-color:#fff; font-weight:800; box-shadow:inset 0 -4px 0 var(--acc); }
+    .menu .tab[hidden] { display:none; }
     @media (max-width: 640px) {
-      .tabs { display:none; }
-      .tab-select { display:block; }
+      .menu .tabs { grid-template-columns:repeat(4,1fr); gap:5px; }
+      .menu .tab { font-size:12.5px; min-height:54px; padding:5px 2px; }
+      .menu .tab .ti { font-size:18px; }
     }
+    /* 今いる画面の見出し(メニューごとに色を変える) */
+    #app { --acc:#1763d6; }
+    #app[data-mode=adjust] { --acc:#c2410c; }
+    #app[data-mode=check]  { --acc:#0f766e; }
+    #app[data-mode=report] { --acc:#6d28d9; }
+    #app[data-mode=count]  { --acc:#15803d; }
+    #app[data-mode=admin]  { --acc:#b45309; }
+    #app[data-mode=po]     { --acc:#475569; }
+    .mode-title { display:flex; align-items:center; gap:12px; margin:0 2px 12px; padding:0 0 8px; border-bottom:4px solid var(--acc); }
+    .mode-title .mi { flex:none; width:44px; height:44px; border-radius:10px; background:var(--acc); color:#fff; font-size:24px; display:flex; align-items:center; justify-content:center; }
+    .mode-title b { display:block; font-size:22px; color:var(--acc); line-height:1.25; }
+    .mode-title small { display:block; color:var(--mut); font-size:14px; }
+    #app .card { border-top:4px solid var(--acc); }
+    #app[data-mode=adjust] #submitBtn:not(:disabled) { background:var(--acc); }
     #video { width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000; display:block; }
     .camwrap { position:relative; width:100%; max-width:300px; aspect-ratio:1/1; margin:0 auto; overflow:hidden; border-radius:10px; }
     .camwrap .frame { position:absolute; top:50%; left:50%; width:80%; aspect-ratio:1; transform:translate(-50%,-50%); border:2px solid #fff; border-radius:10px; box-shadow:0 0 0 2000px rgba(0,0,0,.28); pointer-events:none; }
     #signin { text-align:center; padding:40px 16px; }
+    /* 棚卸(担当者) */
+    .mt-run { margin:14px 0 6px; padding:8px 10px; background:#eef2f8; border-radius:8px; font-size:16px; }
+    .mt-area { margin:14px 0 6px; font-weight:700; color:var(--pri2); font-size:16px; border-bottom:2px solid #c9d6ee; padding-bottom:3px; }
+    .mt-row { border:1px solid #dde1e8; border-radius:10px; padding:10px 12px; margin-bottom:8px; background:#fff; transition:box-shadow .3s; }
+    .mt-row.ok { background:#e9ebee; color:#6b7280; border-color:#d6d9e0; }
+    .mt-row.ok .code, .mt-row.ok .mt-um b { color:#6b7280; }
+    .mt-row.ng { background:#fdecea; border:2px solid var(--ng); }
+    .mt-row.mt-hit { box-shadow:0 0 0 4px #f59e0b; }
+    .mt-top { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .mt-loc { font-size:13px; color:#38414f; background:#f3f4f6; border-radius:4px; padding:1px 6px; }
+    .mt-badge { margin-left:auto; font-size:13px; font-weight:700; padding:2px 10px; border-radius:999px; background:#c7cbd1; color:#374151; }
+    .mt-row.ng .mt-badge { background:var(--ng); color:#fff; }
+    .mt-name { font-size:17px; font-weight:600; margin:4px 0 8px; overflow-wrap:anywhere; }
+    .mt-bot { display:flex; align-items:center; gap:10px; }
+    .mt-um { font-size:13px; color:var(--mut); display:flex; flex-direction:column; min-width:70px; }
+    .mt-um b { font-size:22px; color:#1c2430; }
+    .mt-bot .mt-in { flex:1; min-width:0; font-size:24px; font-weight:700; text-align:right; min-height:54px; }
+    .mt-bot .mt-save { padding:14px 18px; white-space:nowrap; }
+    .mt-ngbox { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px; padding-top:10px; border-top:1px dashed #f0a9a2; font-size:15px; color:var(--ng); }
+    .mt-ngbox b { font-size:20px; }
+    .mt-ngbox select, .mt-ngbox input { flex:1 1 160px; min-height:46px; font-size:16px; }
+    .mt-resolved { font-size:13px; background:var(--ok); color:#fff; border-radius:999px; padding:2px 8px; }
+    .mt-msg { font-size:14px; color:var(--ng); margin-top:4px; }
+    .mt-msg:empty { display:none; }
+    /* 棚卸管理 */
+    .adm-nav { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+    .adm-nav .btn.active, .adm-sub .btn.active { background:var(--pri); color:#fff; }
+    .adm-sub { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+    .adm-h { font-size:17px; margin:18px 0 8px; color:var(--pri2); }
+    .mi-bulk { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:flex-end; margin:10px 0; padding:10px 12px; background:#f3f7ff; border:1px dashed #b9cdf3; border-radius:10px; }
+    .mi-bulk > b { flex:1 1 100%; color:var(--pri2); }
+    .aa-wrap { display:flex; flex-wrap:wrap; gap:12px; flex:1 1 100%; }
+    .mi-bulk .aa-wrap span { min-width:0; flex-direction:row; display:inline-flex; }
+    .aa-col { flex:1 1 300px; min-width:0; display:flex; flex-direction:column; background:#fff; border:1px solid #d6e0f2; border-radius:8px; padding:10px; }
+    .aa-h { font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .aa-h .aa-clr { margin-left:auto; min-height:32px; padding:4px 10px; font-size:14px; }
+    .aa-list { margin-top:6px; max-height:240px; overflow-y:auto; display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start; }
+    .aa-item { border:1px solid #c9d3e3; background:#f7f9fc; border-radius:999px; padding:8px 14px; font-size:15px; cursor:pointer; }
+    .aa-item.on { background:var(--pri); border-color:var(--pri); color:#fff; font-weight:700; }
+    .aa-sel { display:flex; flex-wrap:wrap; gap:6px; min-height:44px; align-content:flex-start; }
+    .aa-chip { display:inline-flex; align-items:center; gap:4px; background:#e3ecfb; color:#1e3a6e; border-radius:999px; padding:4px 4px 4px 12px; font-size:15px; font-weight:600; }
+    .aa-chip button { border:0; background:#c4d5f3; color:#1e3a6e; border-radius:999px; width:28px; height:28px; font-size:16px; cursor:pointer; }
+    .mi-bulk span { display:flex; flex-direction:column; min-width:180px; }
+    .mi-bulk input, .mi-bulk select { min-height:42px; font-size:16px; }
+    .mi-bulk .mi-file { display:inline-flex; align-items:center; cursor:pointer; margin:0; font-size:17px; color:#38414f; }
+    .mi-bulk .mi-gap { flex:0 0 24px; } .mi-bulk .mi-break { flex:1 1 100%; height:0; }
+    .mi-selcount { margin-left:8px; font-size:13px; background:#1763d6; color:#fff; border-radius:999px; padding:2px 10px; font-weight:600; }
+    .btn.mi-add { color:var(--ok); border:1px solid #9fd3b3; } .btn.mi-del { color:var(--ng); border:1px solid #f0a9a2; }
+    .mi-table .mi-selcol { background:#eef2f8; text-align:center; width:64px; white-space:nowrap; }
+    .mi-table th.mi-selcol label { font-size:13px; display:flex; gap:4px; align-items:center; justify-content:center; margin:0; color:#38414f; cursor:pointer; }
+    .mi-table .mi-gapcol { width:28px; border-left:none; border-right:none; background:transparent; }
+    .mi-table .mi-tgtcol { background:#f2fbf5; text-align:center; white-space:nowrap; width:110px; }
+    .mi-table .mi-tgt { display:flex; gap:6px; align-items:center; justify-content:center; margin:0; font-size:14px; color:#1c2430; cursor:pointer; }
+    .mi-table tr.mi-sel td.mi-selcol { background:#cfe0fb; }
+    .m-table th.m-sort { cursor:pointer; user-select:none; } .m-table th.m-sort:hover { background:#dfe7f4; } .m-arrow { color:var(--pri); font-size:11px; }
+    select.ar-chg { background:#fff6d6; border-color:#e5b400; }
+    /* 担当者の進み具合 */
+    .my-sticky { position:sticky; top:56px; z-index:6; background:#fff; padding:8px 0 6px; margin:6px 0; border-bottom:1px solid #eef0f4; }
+    .my-sum { font-size:16px; } .my-sum b { font-size:18px; } .my-done { color:var(--ok); font-weight:700; }
+    .mt-bar { display:flex; height:14px; background:#e5e7eb; border-radius:999px; overflow:hidden; margin:6px 0 4px; }
+    .mt-bar-sm { height:8px; margin:4px 0 0; }
+    .mt-bar-ok { background:#9ca3af; } .mt-bar-ng { background:var(--ng); }
+    .mt-bar-txt { font-size:14px; color:#38414f; display:flex; flex-wrap:wrap; gap:4px 14px; } .mt-bar-txt .ng { color:var(--ng); }
+    .mt-run-h { font-size:16px; }
+    .mt-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .mt-chip { border:1px solid #c9ced8; background:#fff; border-radius:999px; padding:6px 12px; font-size:14px; cursor:pointer; font-family:inherit; }
+    .mt-chip.part { background:#fff6d6; border-color:#e5b400; } .mt-chip.done { background:#e5e7eb; color:#4b5563; } .mt-chip.ng { background:#fdecea; border-color:var(--ng); color:var(--ng); }
+    .mt-area { scroll-margin-top:130px; display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+    .mt-area.done { color:#6b7280; border-bottom-color:#d1d5db; }
+    .mt-area-n { font-size:14px; font-weight:600; color:#38414f; } .mt-area.done .mt-area-n { color:var(--ok); }
+    .mt-empty { padding:6px 4px 10px; }
+    .rp-table tr.tr-ok td { background:#f1f2f4; color:#6b7280; }
+    .rp-table tr.tr-ng td { background:#fdecea; }
+    .mi-grp { font-size:12px; color:var(--mut); margin-top:2px; }
+    .ar-adj { background:#b45309; color:#fff; white-space:nowrap; }
+    .ar-adj-done { color:#15803d; font-weight:700; white-space:nowrap; }
+    .ar-adj-done small { color:var(--mut); font-weight:400; }
+    .rp-table td input[type=text], .rp-table td input[type=number], .rp-table td select { min-height:38px; font-size:15px; padding:6px 8px; }
     /* 発注照会 */
     .po-search { display:flex; gap:8px; align-items:stretch; }
     .po-search input { flex:1; }
@@ -108,7 +209,7 @@
 </head>
 <body>
   <header>
-    <span>在庫移管 <span class="who" id="who"></span></span>
+    <span>在庫移管 <span class="env-badge" id="envBadge" hidden>テスト環境</span> <span class="who" id="who"></span></span>
     <button id="switchUser" type="button" hidden>ユーザー切替</button>
   </header>
   <div class="wrap">
@@ -124,16 +225,21 @@
         <span>サインインの有効期限が切れました。<b>入力内容はそのまま保持しています。</b>もう一度サインインしてください。</span>
         <span id="rebtn" style="display:inline-block;margin-left:8px;vertical-align:middle"></span>
       </div>
-      <div class="card">
+      <nav class="menu" aria-label="メニュー">
+        <div class="menu-lbl">メニュー</div>
         <div class="tabs">
-          <button class="tab active" id="tabMove" type="button">在庫移管</button>
-          <button class="tab" id="tabAdjust" type="button">引き落とし(消費)</button>
-          <button class="tab" id="tabCheck" type="button">在庫確認</button>
-          <button class="tab" id="tabReport" type="button">棚卸表</button>
-          <button class="tab" id="tabCount" type="button">棚卸</button>
-          <button class="tab" id="tabPo" type="button">発注照会</button>
+          <button class="tab active" id="tabMove" type="button"><span class="ti">🔁</span>在庫移管</button>
+          <button class="tab" id="tabAdjust" type="button"><span class="ti">➖</span>引き落とし(消費)</button>
+          <button class="tab" id="tabCheck" type="button"><span class="ti">🔍</span>在庫確認</button>
+          <button class="tab" id="tabReport" type="button"><span class="ti">📋</span>棚卸表</button>
+          <button class="tab" id="tabCount" type="button"><span class="ti">✅</span>棚卸</button>
+          <button class="tab" id="tabAdmin" type="button" hidden><span class="ti">🛠</span>棚卸管理</button>
+          <button class="tab" id="tabPo" type="button"><span class="ti">🧾</span>発注照会</button>
         </div>
-        <select id="tabSelect" class="tab-select" aria-label="メニュー">
+      </nav>
+      <div class="mode-title"><span class="mi" id="modeIco">🔁</span><div><b id="modeName">在庫移管</b><small id="modeDesc"></small></div></div>
+      <div class="card" id="hdrCard">
+        <select id="tabSelect" style="display:none" aria-hidden="true" tabindex="-1">
           <option value="move">在庫移管</option>
           <option value="adjust">引き落とし(消費)</option>
           <option value="check">在庫確認</option>
@@ -141,7 +247,7 @@
           <option value="count">棚卸</option>
           <option value="po">発注照会</option>
         </select>
-        <div class="grid" id="hdrGrid" style="margin-top:12px">
+        <div class="grid" id="hdrGrid">
           <div><label id="lblOrigin">移管元 在庫場所</label><select id="origin"></select></div>
           <div id="destWrap"><label>移管先 在庫場所</label><select id="dest"></select></div>
           <div id="journalWrap" style="display:none"><label class="req">仕訳区分</label><select id="journal"><option value="">選択してください</option></select></div>
@@ -198,6 +304,48 @@
         </div>
       </div>
 
+      <div class="card" id="myCard" style="display:none">
+        <div class="bar" style="margin-top:0"><b style="font-size:19px">自分の担当(棚卸)</b>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <select id="myStaff" style="width:auto;display:none" aria-label="担当者"></select>
+            <select id="myFilter" style="width:auto" aria-label="表示"><option value="all">すべて表示</option><option value="todo">未入力だけ</option><option value="ng">差異だけ</option></select>
+            <button class="btn ghost" id="myReload" type="button">更新</button>
+          </div></div>
+        <div id="myInfo" class="my-sticky"></div>
+        <div class="muted" style="font-size:13px">実数を入れて「確定」。UM在庫と同じなら<b>グレー</b>、違えば<b style="color:var(--ng)">赤</b>になるので、理由を選んで「理由を保存」を押してください。品目のラベルを読み取ると、その行へ移動します。</div>
+        <div id="myList"></div>
+      </div>
+
+      <div class="card" id="admCard" style="display:none">
+        <div class="adm-nav"><button class="btn ghost active" type="button" data-av="runs">調査</button><button class="btn ghost" type="button" data-av="master">マスタ</button></div>
+        <div id="admRuns">
+          <h3 class="adm-h" style="margin-top:0">調査を作る</h3>
+          <div class="grid">
+            <div><label>種類</label><select id="admKind"><option value="katazai">形材(前営業日)</option><option value="buhin">部品(前週)</option><option value="kansei">完成品(今月)</option></select></div>
+            <div><label>工場</label><select id="admFactory"><option>本社工場</option><option>阪南工場</option></select></div>
+            <div id="admFromWrap"><label>開始日</label><input type="date" id="admFrom"></div>
+            <div><label id="admToLbl">終了日</label><input type="date" id="admTo"></div>
+            <div><label>メモ(任意)</label><input type="text" id="admMemo" maxlength="200" placeholder="例: 10/23分"></div>
+            <div style="align-self:end"><button class="btn primary" id="admCreate" type="button" style="width:100%">調査を作成</button></div>
+          </div>
+          <div class="muted" style="margin-top:6px">期間内に動き(入出庫)のあった品目を拾います。完成品は「棚卸対象」に設定した品目だけです。期間は種類を選ぶと自動で入ります(変更できます)。</div>
+          <div id="admMsg" class="result"></div>
+          <h3 class="adm-h">調査の一覧</h3>
+          <div class="bar" style="margin-top:0;justify-content:flex-start;gap:8px;flex-wrap:wrap">
+            <select id="admRunView" style="width:auto" aria-label="表示"><option value="recent">最近の調査(作業中＋30日以内に作成)</option><option value="open">作業中だけ</option><option value="closed">締めた調査だけ</option><option value="all">すべて(過去も)</option></select>
+            <select id="admRunKind" style="width:auto" aria-label="種類"><option value="">種類: すべて</option><option value="katazai">形材</option><option value="buhin">部品</option><option value="kansei">完成品</option></select>
+            <select id="admRunFac" style="width:auto" aria-label="工場"><option value="">工場: すべて</option><option>本社工場</option><option>阪南工場</option></select>
+          </div>
+          <div id="admRunList" class="rp-area"></div>
+        </div>
+        <div id="admRun" style="display:none"></div>
+        <div id="admMaster" style="display:none">
+          <div class="adm-sub"><button class="btn ghost" type="button" data-mk="reasons">理由分類</button><button class="btn ghost" type="button" data-mk="areas">エリア</button>
+            <button class="btn ghost" type="button" data-mk="items">品目の紐づけ</button><button class="btn ghost" type="button" data-mk="admins">管理者</button></div>
+          <div id="admMasterBody"></div>
+        </div>
+      </div>
+
       <div class="card" id="poCard" style="display:none">
         <label for="poInput">発注明細番号(または発注番号)</label>
         <div class="po-search">
@@ -212,8 +360,8 @@
         <div class="grid rp-ctrl">
           <div><label>工場</label><select id="rpFactory"><option>本社工場</option><option>阪南工場</option></select></div>
           <div><label>種類</label><select id="rpKind"><option value="katazai">形材</option><option value="buhin">部品</option><option value="kansei">完成品</option></select></div>
-          <div><label>開始日</label><input type="date" id="rpFrom"></div>
-          <div><label>終了日</label><input type="date" id="rpTo"></div>
+          <div id="rpFromWrap"><label>開始日</label><input type="date" id="rpFrom"></div>
+          <div><label id="rpToLbl">終了日</label><input type="date" id="rpTo"></div>
           <div style="align-self:end"><button class="btn primary" id="rpLoad" type="button" style="width:100%">表示</button></div>
         </div>
         <div class="bar rp-ctrl">
@@ -248,8 +396,20 @@
 
 <script>
   /* ===== 設定(この2つを埋めてください) ===== */
+  // 開いたURLで接続先を自動切替: 本番サイト(moritaalumi.my.salesforce-sites.com)・GitHub(ma-joshis.github.io)=本番GAS / それ以外(fullsandサイト・ローカル)=テストGAS(fullsand)
+  //   GitHub は本番サイトが使えるまでの本番の入口(2026-11-09 上中さん「従来のgithub方式で」)
+  var IS_PROD = /^moritaalumi\.my\.(salesforce-sites|site)\.com$/.test(location.hostname) || /^ma-joshis\.github\.io$/.test(location.hostname);
+  var GAS_URL_TEST = 'https://script.google.com/macros/s/AKfycbysFsni50z4Vi-qaDa3Di7owezI8i2JaZl3PrZUkVXdcHboMItUhdmw8pU-sIRO4oUzjA/exec';
+  var GAS_URL_PROD = 'https://script.google.com/macros/s/AKfycbyHJwN5mbnKXxKy4OEBYMXwuFRUFAWaBwWaYA2q3oF72mMqKrNqghc1mgsC6lSQme6h/exec';   // 本番GASのWebアプリURL(本番GAS作成後に設定)
+  // ログイン: GitHub版はGoogleの標準ボタン(GSI)。それ以外(Salesforce Sites等)はGoogleに生成元を登録できないため、
+  // GASのログイン用デプロイ(社内ドメイン限定)へ移動→社員確認→ #zs=トークン で戻る方式
+  var LOGIN_URL_TEST = 'https://script.google.com/macros/s/AKfycbyHKrpdcGavXUwmqG1Ljy3BBTNOq7kkuK-iAzIPXT7cVadWjn5Z9AMnrlr7Xd-hwzKsAg/exec';
+  var LOGIN_URL_PROD = 'https://script.google.com/macros/s/AKfycbyanF6MTwPGkuDBhk-onGO2aDJHeeU0EXULTFygRrVHNSnvac4vmezzcfVewvM9Sb1m/exec';   // 本番GASのログイン用デプロイURL(本番GAS作成後に設定)
+  var USE_GAS_LOGIN = !/\.github\.io$/.test(location.hostname);
   var CONFIG = {
-    GAS_API_URL: 'https://script.google.com/macros/s/AKfycbysFsni50z4Vi-qaDa3Di7owezI8i2JaZl3PrZUkVXdcHboMItUhdmw8pU-sIRO4oUzjA/exec',
+    ENV: IS_PROD ? 'prod' : 'test',
+    GAS_API_URL: IS_PROD ? GAS_URL_PROD : GAS_URL_TEST,
+    LOGIN_URL: IS_PROD ? LOGIN_URL_PROD : LOGIN_URL_TEST,
     GOOGLE_CLIENT_ID: '952982265733-h7d6hldt8ggopotniaeocp53tv1h36vl.apps.googleusercontent.com'
   };
 
@@ -266,19 +426,28 @@
     $('tabCount').classList.toggle('active', m==='count');
     $('tabReport').classList.toggle('active', m==='report');
     $('tabPo').classList.toggle('active', m==='po');
+    $('tabAdmin').classList.toggle('active', m==='admin');
     if($('tabSelect').value!==m) $('tabSelect').value=m;
-    var isEntry=(m==='move'||m==='adjust'), isCheck=(m==='check'), isCount=(m==='count'), isReport=(m==='report'), isPo=(m==='po');
-    $('scanCard').style.display   = (isReport||isPo) ? 'none' : '';
+    var mi=MODE_INFO[m]||MODE_INFO.move;
+    $('app').dataset.mode=m; $('modeIco').textContent=mi[0]; $('modeName').textContent=mi[1]; $('modeDesc').textContent=mi[2];
+    $('hdrCard').style.display = (m==='move'||m==='adjust') ? '' : 'none';
+    var isEntry=(m==='move'||m==='adjust'), isCheck=(m==='check'), isCount=(m==='count'), isReport=(m==='report'), isPo=(m==='po'), isAdm=(m==='admin');
+    var enter = (ST.lastMode!==m); ST.lastMode=m;
+    $('scanCard').style.display   = (isReport||isPo||isAdm) ? 'none' : '';
+    $('myCard').style.display     = isCount ? '' : 'none';
+    $('admCard').style.display    = isAdm ? '' : 'none';
+    if(enter && isCount) loadMyTasks();
+    if(enter && isAdm) admOpen_();
     $('reportCard').style.display = isReport ? '' : 'none';
     $('poCard').style.display     = isPo ? '' : 'none';
-    if((isReport||isPo) && !$('camStop').hidden){ try{ stopCam(); }catch(e){} }
+    if((isReport||isPo||isAdm) && !$('camStop').hidden){ try{ stopCam(); }catch(e){} }
     // タブごとに表示を切替(カメラの読取カードは全モード共通で使う)
     $('hdrGrid').style.display   = isEntry ? '' : 'none';
     $('whoRow').style.display    = isEntry ? '' : 'none';
     $('entryCard').style.display = isEntry ? '' : 'none';
     $('checkCard').style.display = isCheck ? '' : 'none';
-    $('countHdr').style.display  = isCount ? '' : 'none';
-    $('countCard').style.display = isCount ? '' : 'none';
+    $('countHdr').style.display  = 'none';   // 旧カウント画面(担当制の「自分の担当」に置き換え)
+    $('countCard').style.display = 'none';
     $('scanHint').style.display  = isEntry ? '' : 'none';
     if(isEntry){
       $('destWrap').style.display = (m==='adjust') ? 'none' : '';
@@ -288,10 +457,19 @@
       $('submitBtn').textContent = (m==='adjust') ? '決定(一括引き落とし)' : '決定(一括移管)';
       updateSubmitState();
     }
-    setScanMsg(isCheck ? 'カメラで品目を読み取ると在庫を照会します。' : (isCount ? 'カメラで品目を読み取るとカウントに追加します。' : ''));
+    setScanMsg(isCheck ? 'カメラで品目を読み取ると在庫を照会します。' : (isCount ? 'カメラで品目を読み取ると、その品目の行へ移動します。' : ''));
   }
 
 
+  var MODE_INFO = {   // 画面の見出し: アイコン / 名前 / 説明
+    move:   ['🔁','在庫移管','在庫場所から別の在庫場所へ品目を移します'],
+    adjust: ['➖','引き落とし(消費)','使った分だけ在庫を減らします(移管ではありません)'],
+    check:  ['🔍','在庫確認','品目を読み取って、今の在庫を調べます'],
+    report: ['📋','棚卸表','期間の在庫と入出庫を表で見る・印刷します'],
+    count:  ['✅','棚卸','自分の担当の品目を数えて、実数を入れます'],
+    admin:  ['🛠','棚卸管理','調査の作成・担当の割り振り・差異の確認・マスタ'],
+    po:     ['🧾','発注照会','発注明細番号から、発注した品目を調べます']
+  };
   /* ===== 棚卸表(週次: 形材 / 部品 / 完成品)・受払表・棚卸対象の設定 ===== */
   var RP = null;                        // 直近に表示した棚卸表データ
   var TG = null, TGMAP = {}, TG_CHG = {};   // 棚卸対象の設定: 全完成品 / id→品目 / 未保存の変更(id→on)
@@ -309,9 +487,12 @@
     [].forEach.call(document.querySelectorAll('#reportCard .rp-ctrl'), function(el){ el.style.display = v==='tg' ? 'none' : ''; });
   }
   function rpHint_(){ var k=$('rpKind').value; return $('rpFactory').value+'_在庫置場 の'+KIND_NAME[k]+'を表示します'+(k==='kansei'?'(棚卸対象に設定した品目)。':'(期間内に入出庫があった品目)。'); }
-  function onKindChange_(){
+  function onKindChange_(setDates){
     var k=$('rpKind').value;
-    $('rpOnlyLbl').textContent = k==='kansei' ? '期間内に入庫・出庫があった品目だけ' : '前日(終了日の前日)に出庫・立て数があった品目だけ';
+    if(setDates===true){ var pd=stDefaultPeriod_(k); $('rpFrom').value=pd[0]; $('rpTo').value=pd[1]; }
+    $('rpFromWrap').style.display = k==='katazai' ? 'none' : '';   // 形材は対象日1日だけ指定
+    $('rpToLbl').textContent = k==='katazai' ? '対象日(初期値=前営業日)' : '終了日';
+    $('rpOnlyLbl').textContent = k==='kansei' ? '期間内に入庫・出庫があった品目だけ' : (k==='katazai' ? '対象日に出庫・立て数があった品目だけ' : '前日(終了日の前日)に出庫・立て数があった品目だけ');
     $('rpTargets').style.display = k==='kansei' ? '' : 'none';
     RP=null; $('rpArea').innerHTML=''; $('rpGroup').style.display='none'; $('rpXlsx').disabled=true; $('rpPrint').disabled=true;
     showView_('rp'); $('rpInfo').textContent=rpHint_();
@@ -320,16 +501,17 @@
     var t=new Date(), f=new Date(); f.setDate(f.getDate()-6);   // 既定: 直近7日間(今日を含む)
     $('rpTo').value=ymdLocal_(t); $('rpFrom').value=ymdLocal_(f);
     $('rpLoad').addEventListener('click', loadReport);
-    $('rpKind').addEventListener('change', onKindChange_);
+    $('rpKind').addEventListener('change', function(){ onKindChange_(true); });
     $('rpFactory').addEventListener('change', onKindChange_);
     $('rpOnly').addEventListener('change', renderReport);
     $('rpGroup').addEventListener('change', renderReport);
     $('rpXlsx').addEventListener('click', downloadXlsx);
     $('rpPrint').addEventListener('click', function(){ setPageSize_(RP && RP.kind==='kansei' ? 'landscape' : 'portrait'); window.print(); });
     $('rpTargets').addEventListener('click', openTargets);
-    onKindChange_();
+    onKindChange_(true);
   }
   function loadReport(){
+    if($('rpKind').value==='katazai') $('rpFrom').value=$('rpTo').value;   // 形材は対象日1日
     var from=$('rpFrom').value, to=$('rpTo').value;
     if(!from || !to){ $('rpInfo').textContent='開始日と終了日を指定してください。'; return; }
     if(from>to){ $('rpInfo').textContent='開始日が終了日より後になっています。'; return; }
@@ -357,16 +539,16 @@
   }
   function rpTitle_(){ return KIND_NAME[RP.kind]+' 棚卸表(' + RP.place + ')'; }
   function rpMeta_(){
-    var only = !$('rpOnly').checked ? '' : (RP.kind==='kansei' ? ' ／ 期間内に入出庫ありのみ' : ' ／ '+md_(RP.prevDay)+'に出庫・立てありのみ');
-    return '期間 '+slash_(RP.from)+'〜'+slash_(RP.to)+only+' ／ 出力 '+RP.generatedAt;
+    var only = !$('rpOnly').checked ? '' : (RP.kind==='kansei' ? ' ／ 期間内に入出庫ありのみ' : ' ／ '+md_(RP.prevDay)+'に出庫・立てありのみ');   // 形材は prevDay=対象日
+    return (RP.from===RP.to ? '対象日 '+slash_(RP.to) : '期間 '+slash_(RP.from)+'〜'+slash_(RP.to))+only+' ／ 出力 '+RP.generatedAt;
   }
   function rpHead_(gname){ return '<div class="rp-head"><b>'+esc(rpTitle_())+'</b>'+(gname?'<span class="rp-gname">商品: '+esc(gname)+'</span>':'')+'<span>'+esc(rpMeta_())+'</span></div>'; }
   function renderReport(){
     if(!RP){ $('rpArea').innerHTML=''; return; }
     var rows=rpRows_();
     $('rpXlsx').disabled=!rows.length; $('rpPrint').disabled=!rows.length;
-    $('rpInfo').textContent = rows.length+'品目'+(rows.length!==RP.rows.length?('(全'+RP.rows.length+'品目中)'):'')+' ／ '+RP.place+' ／ 期間 '+slash_(RP.from)+'〜'+slash_(RP.to);
-    if(RP.kind==='kansei' && !RP.targetCount){ $('rpArea').innerHTML=rpHead_('')+'<div class="banner warn">棚卸対象の品目がまだ設定されていません。「棚卸対象の設定」から、棚卸する品目を選んでください。</div>'; return; }
+    $('rpInfo').textContent = rows.length+'品目'+(rows.length!==RP.rows.length?('(全'+RP.rows.length+'品目中)'):'')+' ／ '+RP.place+' ／ '+(RP.from===RP.to ? '対象日 '+slash_(RP.to) : '期間 '+slash_(RP.from)+'〜'+slash_(RP.to));
+    if(!RP.targetCount){ $('rpArea').innerHTML=rpHead_('')+'<div class="banner warn">棚卸対象の品目がまだ設定されていません。「棚卸管理」→「マスタ」→「品目の紐づけ」(完成品は「棚卸対象の設定」でも可)で、棚卸する品目を選んでください。</div>'; return; }
     if(!rows.length){ $('rpArea').innerHTML=rpHead_('')+'<div class="banner warn">該当する品目はありません。</div>'; return; }
     var lg=function(r){ return '<td class="noprint"><button class="btn ghost rp-lg" type="button" data-lg="'+esc(r.itemId)+'">受払</button></td>'; };
     if(RP.kind!=='kansei'){
@@ -570,6 +752,690 @@
   var toastTimer=null;
   function toast_(m){ var el=$('toast'); el.textContent=m; el.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(function(){ el.classList.remove('show'); }, 1800); }
 
+  /* ===== 棚卸(担当者: 自分の担当 / 管理者: 棚卸管理) … データはGAS経由でスプレッドシート ===== */
+  var ST = { meta:null, tasks:null, runs:null, run:null, items:null, itemKind:'' };
+  var ST_KIND = { katazai:'形材', buhin:'部品', kansei:'完成品' };
+  function stLoadMeta_(){
+    return api('stMeta',{}).then(function(res){
+      if(!res || !res.ok){ return null; }
+      ST.meta=res;
+      if(res.me && res.me.isAdmin){
+        $('tabAdmin').hidden=false;
+        if(!$('tabSelect').querySelector('option[value="admin"]')){
+          var o=document.createElement('option'); o.value='admin'; o.textContent='棚卸管理';
+          $('tabSelect').insertBefore(o, $('tabSelect').querySelector('option[value="po"]'));
+        }
+        $('myStaff').style.display='';
+        $('myStaff').innerHTML='<option value="">自分の担当</option>'+stStaff_().map(function(s){ return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'; }).join('');
+      }
+      return res;
+    }).catch(function(){ return null; });
+  }
+  function stReasonOpts_(sel){
+    var list=(ST.meta && ST.meta.reasons) || [];
+    return '<option value="">理由を選ぶ</option>'+list.map(function(r){ return '<option'+(r===sel?' selected':'')+'>'+esc(r)+'</option>'; }).join('')
+      +(sel && list.indexOf(sel)<0 ? '<option selected>'+esc(sel)+'</option>' : '');
+  }
+  function stLoc_(l){ return esc(l.area||'(エリアなし)')+(l.num!==''&&l.num!=null?'・'+esc(l.num):''); }
+  function stNum_(v){ return (v===''||v==null) ? '' : fmt(v); }
+  function stDiff_(d){ if(d===''||d==null) return ''; d=Number(d); return (d>0?'+':'')+fmt(d); }
+
+  /* --- 担当者: 自分の担当 --- */
+  function wireMy_(){
+    $('myReload').addEventListener('click', loadMyTasks);
+    $('myFilter').addEventListener('change', renderMyTasks_);
+    $('myStaff').addEventListener('change', loadMyTasks);
+    $('myList').addEventListener('click', function(e){   // エリアのボタン→そのエリアへ移動
+      var b=e.target.closest && e.target.closest('.mt-chip'); if(!b) return;
+      var el=document.getElementById(b.dataset.jump); if(el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+    });
+  }
+  function loadMyTasks(){
+    $('myInfo').textContent='読み込み中…'; $('myList').innerHTML='';
+    var pm = ST.meta ? Promise.resolve(ST.meta) : stLoadMeta_();   // 管理者情報(理由分類)と担当リストを同時に取得
+    var pt = api('stMyTasks',{ staffId:$('myStaff').value || '' });
+    Promise.all([pm, pt]).then(function(arr){ var res=arr[1];
+      if(!res || !res.ok){ $('myInfo').textContent='エラー: '+((res&&res.message)||'取得に失敗しました'); return; }
+      ST.tasks=res; renderMyTasks_();
+    }).catch(function(e){ $('myInfo').textContent='エラー: '+e; });
+  }
+  function stStat_(ls){ var x={ n:ls.length, done:0, ok:0, ng:0 }; ls.forEach(function(l){ if(l.status){ x.done++; if(l.status==='一致') x.ok++; else x.ng++; } }); return x; }
+  function stAreas_(g){ var order=[], by={}; g.lines.forEach(function(l){ var a=l.area||''; if(!by[a]){ by[a]=[]; order.push(a); } by[a].push(l); }); return { order:order, by:by }; }
+  function stBar_(x){
+    var w=function(v){ return x.n ? (v*100/x.n) : 0; };
+    return '<div class="mt-bar"><div class="mt-bar-ok" style="width:'+w(x.ok)+'%"></div><div class="mt-bar-ng" style="width:'+w(x.ng)+'%"></div></div>'
+      +'<div class="mt-bar-txt"><b>'+x.done+' / '+x.n+'件 完了</b>('+(x.n?Math.round(x.done*100/x.n):0)+'%)<span>一致 '+x.ok+'</span><span class="ng">差異 '+x.ng+'</span><span>残り '+(x.n-x.done)+'</span></div>';
+  }
+  function renderMyTasks_(){
+    var res=ST.tasks; if(!res) return;
+    if(res.message && !res.runs.length){ $('myInfo').textContent=res.message; $('myList').innerHTML=''; return; }
+    if(!res.runs.length){ $('myInfo').textContent='今、あなたに割り振られた棚卸はありません。'; $('myList').innerHTML=''; return; }
+    var f=$('myFilter').value;
+    var keep=function(l){ return f==='all' || (f==='todo' && !l.status) || (f==='ng' && l.status==='差異'); };
+    $('myList').innerHTML = res.runs.map(function(g, gi){
+      var r=g.run, A=stAreas_(g);
+      var html='<div class="mt-run"><div class="mt-run-h"><b>'+esc(ST_KIND[r.kind]||r.kind)+'</b> '+esc(r.factory)+' ／ '+(r.to===r.from?'対象日 ':'')+esc(slash_(r.from))+(r.to!==r.from?'〜'+esc(slash_(r.to)):'')
+        +(r.memo?' <span class="muted">'+esc(r.memo)+'</span>':'')+'</div><div class="mt-prog" data-gi="'+gi+'"></div>'
+        +'<div class="mt-chips" data-gi="'+gi+'"></div></div>';
+      A.order.forEach(function(a, ai){
+        var ls=A.by[a].filter(keep);
+        html+='<div class="mt-area" id="mtA'+gi+'_'+ai+'"></div>';
+        html+= ls.length ? ls.map(stMyRow_).join('') : '<div class="muted mt-empty">'+(f==='todo'?'このエリアはすべて入力済みです ✔':'表示する行はありません')+'</div>';
+      });
+      return html;
+    }).join('');
+    wireMyRows_($('myList'));
+    stUpdateMyInfo_();
+  }
+  function stMyRow_(l){
+    var cls = l.status==='一致' ? ' ok' : (l.status==='差異' ? ' ng' : '');
+    return '<div class="mt-row'+cls+'" data-line="'+esc(l.lineId)+'" data-code="'+esc(l.code)+'">'
+      +'<div class="mt-top"><span class="mt-loc">'+stLoc_(l)+'</span><span class="code">'+esc(l.code)+'</span>'+(l.status?'<span class="mt-badge">'+esc(l.status)+'</span>':'')+'</div>'
+      +'<div class="mt-name">'+esc(l.name)+'</div>'
+      +'<div class="mt-bot"><span class="mt-um">UM在庫<b>'+stNum_(l.um)+'</b></span>'
+        +'<input class="mt-in" type="number" inputmode="decimal" min="0" step="any" placeholder="実数" value="'+esc(l.actual===''||l.actual==null?'':l.actual)+'">'
+        +'<button class="btn primary mt-save" type="button">'+(l.status?'修正':'確定')+'</button></div>'
+      +(l.status==='差異' ? '<div class="mt-ngbox">差異 <b>'+stDiff_(l.diff)+'</b>'
+          +'<select class="mt-cat">'+stReasonOpts_(l.reasonCat)+'</select>'
+          +'<input class="mt-reason" type="text" maxlength="300" placeholder="原因(例: 束の数え漏れ)" value="'+esc(l.reason||'')+'">'
+          +'<button class="btn ghost mt-rsave" type="button">理由を保存</button>'
+          +(l.resolved==='済'?'<span class="mt-resolved">対応済</span>':'')+'</div>' : '')
+      +'<div class="mt-msg"></div></div>';
+  }
+  function wireMyRows_(root){
+    root.querySelectorAll('.mt-row').forEach(function(row){
+      var inp=row.querySelector('.mt-in');
+      var save=function(withReason){
+        var id=row.dataset.line, v=inp.value;
+        if(v===''){ row.querySelector('.mt-msg').textContent='実数を入れてください。'; inp.focus(); return; }
+        var body={ lineId:id, actual:v };
+        if(withReason){ body.reasonCat=row.querySelector('.mt-cat').value; body.reason=row.querySelector('.mt-reason').value; }
+        else if(row.querySelector('.mt-cat')){ body.reasonCat=row.querySelector('.mt-cat').value; body.reason=row.querySelector('.mt-reason').value; }
+        row.querySelector('.mt-msg').textContent='保存中…';
+        api('stSaveCount', body).then(function(res){
+          if(!res || !res.ok){ row.querySelector('.mt-msg').textContent='エラー: '+((res&&res.message)||'保存できませんでした'); return; }
+          stReplaceTask_(res.line);
+          var fresh=document.createElement('div'); fresh.innerHTML=stMyRow_(res.line); var nr=fresh.firstChild;
+          row.parentNode.replaceChild(nr, row); wireMyRows_(nr.parentNode.querySelectorAll ? { querySelectorAll:function(){ return [nr]; } } : nr);
+          if(res.line.status==='差異'){
+            if(res.line.reasonCat){ var mm=nr.querySelector('.mt-msg'); mm.style.color='var(--ok)'; mm.textContent='理由を保存しました。'; }
+            else { nr.querySelector('.mt-msg').textContent='数が合いません。理由を選んで「理由を保存」を押してください。'; nr.querySelector('.mt-cat').focus(); }
+          }
+          else { var next=nr.nextElementSibling; while(next && !next.classList.contains('mt-row')) next=next.nextElementSibling; if(next && !next.classList.contains('ok') && !next.classList.contains('ng')){ var ni=next.querySelector('.mt-in'); if(ni){ ni.focus(); } } }
+          stUpdateMyInfo_();
+        }).catch(function(e){ row.querySelector('.mt-msg').textContent='エラー: '+e; });
+      };
+      row.querySelector('.mt-save').addEventListener('click', function(){ save(false); });
+      inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); save(false); } });
+      var rs=row.querySelector('.mt-rsave'); if(rs) rs.addEventListener('click', function(){ save(true); });
+    });
+  }
+  function stReplaceTask_(line){ if(!ST.tasks) return; ST.tasks.runs.forEach(function(g){ g.lines.forEach(function(l,i){ if(l.lineId===line.lineId) g.lines[i]=line; }); }); }
+  function stUpdateMyInfo_(){   // 進み具合(全体バー・調査ごとのバー・エリアのボタン・エリア見出し)を今の入力状況で描き直す
+    var res=ST.tasks; if(!res) return;
+    var all=[]; res.runs.forEach(function(g){ all=all.concat(g.lines); });
+    var x=stStat_(all);
+    $('myInfo').innerHTML='<div class="my-sum">あなたの担当 <b>'+x.done+' / '+x.n+'件</b> 完了'+(x.n&&x.done===x.n?' <span class="my-done">🎉 すべて完了しました</span>':'　残り <b>'+(x.n-x.done)+'件</b>')+'</div>'
+      +'<div class="mt-bar mt-bar-sm"><div class="mt-bar-ok" style="width:'+(x.n?x.ok*100/x.n:0)+'%"></div><div class="mt-bar-ng" style="width:'+(x.n?x.ng*100/x.n:0)+'%"></div></div>';
+    res.runs.forEach(function(g, gi){
+      var A=stAreas_(g);
+      var pe=document.querySelector('.mt-prog[data-gi="'+gi+'"]'); if(pe) pe.innerHTML=stBar_(stStat_(g.lines));
+      var ce=document.querySelector('.mt-chips[data-gi="'+gi+'"]');
+      if(ce) ce.innerHTML='<div class="muted" style="width:100%;font-size:13px">エリア(タップでそこへ移動)</div>'+A.order.map(function(a, ai){
+        var y=stStat_(A.by[a]), cls = y.done===y.n ? (y.ng?'ng':'done') : (y.done?'part':'none');
+        return '<button type="button" class="mt-chip '+cls+'" data-jump="mtA'+gi+'_'+ai+'">'+esc(a||'(エリアなし)')+' <b>'+y.done+'/'+y.n+'</b>'+(y.done===y.n?' ✔':'')+'</button>';
+      }).join('');
+      A.order.forEach(function(a, ai){
+        var he=document.getElementById('mtA'+gi+'_'+ai); if(!he) return;
+        var y=stStat_(A.by[a]);
+        he.innerHTML=esc(a||'(エリアなし)')+'<span class="mt-area-n">'+y.done+' / '+y.n+(y.done===y.n?' ✔ 完了':'')+'</span>';
+        he.classList.toggle('done', y.done===y.n);
+      });
+    });
+  }
+  /* 棚卸タブで品目を読み取ったら、その品目の行へ移動して実数欄にカーソル */
+  function focusMyLine_(it){
+    var row=$('myList').querySelector('.mt-row[data-code="'+(window.CSS&&CSS.escape?CSS.escape(it.code):it.code)+'"]');
+    if(!row && $('myFilter').value!=='all'){ $('myFilter').value='all'; renderMyTasks_(); row=$('myList').querySelector('.mt-row[data-code="'+it.code+'"]'); }
+    if(!row){ setScanMsg('「'+it.code+'」はあなたの担当にありません。'); return; }
+    row.scrollIntoView({ behavior:'smooth', block:'center' }); row.classList.add('mt-hit'); setTimeout(function(){ row.classList.remove('mt-hit'); }, 1500);
+    var i=row.querySelector('.mt-in'); if(i) i.focus(); setScanMsg('読取: '+it.code+' '+it.name);
+  }
+
+  /* --- 管理者: 棚卸管理 --- */
+  function ymd_(d){ var z=function(n){ return (n<10?'0':'')+n; }; return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()); }
+  function stDefaultPeriod_(kind){   // 形材=前営業日(土日を飛ばす) / 部品=前週(月〜日) / 完成品=今月1日〜今日
+    var t=new Date(); t.setHours(0,0,0,0);
+    if(kind==='katazai'){ var d=new Date(t); do{ d.setDate(d.getDate()-1); }while(d.getDay()===0 || d.getDay()===6); return [ymd_(d), ymd_(d)]; }
+    if(kind==='buhin'){ var m=new Date(t); m.setDate(m.getDate()-((m.getDay()+6)%7)-7); var s=new Date(m); s.setDate(s.getDate()+6); return [ymd_(m), ymd_(s)]; }
+    return [ymd_(new Date(t.getFullYear(), t.getMonth(), 1)), ymd_(t)];
+  }
+  function wireAdmin_(){
+    document.querySelectorAll('#admCard .adm-nav [data-av]').forEach(function(b){ b.addEventListener('click', function(){ admView_(b.dataset.av); }); });
+    var admKindUi=function(){ var k=$('admKind').value, p=stDefaultPeriod_(k); $('admFrom').value=p[0]; $('admTo').value=p[1];
+      $('admFromWrap').style.display = k==='katazai' ? 'none' : ''; $('admToLbl').textContent = k==='katazai' ? '対象日' : '終了日'; };
+    $('admKind').addEventListener('change', admKindUi);
+    $('admCreate').addEventListener('click', function(){ admCreateRun_(false); });
+    ['admRunView','admRunKind','admRunFac'].forEach(function(id){ $(id).addEventListener('change', admRenderRuns_); });
+    admKindUi();
+  }
+  function admView_(v){
+    document.querySelectorAll('#admCard .adm-nav [data-av]').forEach(function(b){ b.classList.toggle('active', b.dataset.av===v); });
+    $('admRuns').style.display = v==='runs' ? '' : 'none';
+    $('admRun').style.display = v==='run' ? '' : 'none';
+    $('admMaster').style.display = v==='master' ? '' : 'none';
+    if(v==='runs') admLoadRuns_();
+    if(v==='master') admMaster_('reasons');
+  }
+  function admOpen_(){ (ST.meta ? Promise.resolve(ST.meta) : stLoadMeta_()).then(function(){ admView_('runs'); }); }
+  function admRunLabel_(r){ return slash_(r.from)+(r.to!==r.from?'〜'+slash_(r.to):'')+'('+r.status+'・'+r.createdAt+' '+r.createdBy+'作成'+(r.memo?'・'+r.memo:'')+')'; }
+  function admCreateRun_(allowOverlap){
+    if($('admKind').value==='katazai') $('admFrom').value=$('admTo').value;   // 形材は対象日1日
+    var k=$('admKind').value, f=$('admFactory').value, from=$('admFrom').value, to=$('admTo').value;
+    if(!from || !to || from>to){ $('admMsg').className='result ng'; $('admMsg').textContent='期間を正しく指定してください。'; return; }
+    if(!allowOverlap && !confirm(f+' の'+ST_KIND[k]+'について、'+from.replace(/-/g,'/')+(from!==to?'〜'+to.replace(/-/g,'/'):'')+' に動きのあった品目で調査を作成します。よろしいですか？')) return;
+    $('admCreate').disabled=true; $('admMsg').className='result'; $('admMsg').textContent='作成中…(品目が多いと数十秒かかります)';
+    api('stCreateRun',{ kind:k, factory:f, from:from, to:to, memo:$('admMemo').value, allowOverlap:!!allowOverlap }).then(function(res){
+      $('admCreate').disabled=false;
+      if(res && res.code==='DUP'){   // 同じ期間の調査がある → 作らずに、その調査を開けるようにする
+        $('admMsg').className='result ng';
+        $('admMsg').innerHTML=esc(res.message)+' <button class="btn ghost rp-lg" type="button" id="admDupOpen">その調査を開く</button>';
+        $('admDupOpen').onclick=function(){ admOpenRun_(res.run.runId); };
+        return;
+      }
+      if(res && res.code==='OVERLAP'){   // 期間が重なるだけ → 確かめてから作る
+        $('admMsg').className='result'; $('admMsg').textContent='';
+        var msg='期間が重なる'+f+'の'+ST_KIND[k]+'の調査があります。\n\n'+res.runs.map(function(r){ return '・'+admRunLabel_(r); }).join('\n')
+          +'\n\n同じ品目が2つの調査に入り、担当者の画面にも両方出ます。それでも作成しますか？';
+        if(confirm(msg)) admCreateRun_(true);
+        return;
+      }
+      if(!res || !res.ok){ $('admMsg').className='result ng'; $('admMsg').textContent='作成できませんでした: '+((res&&res.message)||''); return; }
+      $('admMsg').className='result ok'; $('admMsg').textContent=res.count+'品目の調査を作成しました'+(res.unassigned?('(担当が決まっていない品目 '+res.unassigned+'件 → 開いて割り振ってください)'):'')+'。';
+      $('admMemo').value=''; admOpenRun_(res.runId);
+    }).catch(function(e){ $('admCreate').disabled=false; $('admMsg').className='result ng'; $('admMsg').textContent='エラー: '+e; });
+  }
+  function admLoadRuns_(){
+    $('admRunList').innerHTML='<div class="muted">読み込み中…</div>';
+    api('stRuns',{}).then(function(res){
+      if(!res || !res.ok){ $('admRunList').innerHTML='<div class="banner ng">'+esc((res&&res.message)||'取得に失敗しました')+'</div>'; return; }
+      ST.runs=res.runs; admRenderRuns_();
+    }).catch(function(e){ $('admRunList').innerHTML='<div class="banner ng">エラー: '+esc(e)+'</div>'; });
+  }
+  function admRenderRuns_(){
+    var all=ST.runs||[], v=$('admRunView').value, k=$('admRunKind').value, f=$('admRunFac').value;
+    if(!all.length){ $('admRunList').innerHTML='<div class="muted">まだ調査はありません。上のフォームから作成してください。</div>'; return; }
+    var d=new Date(); d.setDate(d.getDate()-30);
+    var since=d.getFullYear()+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+('0'+d.getDate()).slice(-2);   // createdAt は yyyy/MM/dd HH:mm
+    var byKF=all.filter(function(r){ return (!k || r.kind===k) && (!f || r.factory===f); });
+    var runs=byKF.filter(function(r){
+      if(v==='open') return r.status!=='締め';
+      if(v==='closed') return r.status==='締め';
+      if(v==='recent') return r.status!=='締め' || String(r.createdAt)>=since;
+      return true;
+    });
+    var hidden=byKF.length-runs.length;
+    var note=(v==='recent' && hidden)?'<div class="muted" style="margin:0 0 6px">30日より前に作って締めた調査 '+hidden+'件は表示していません(データは残っています。「すべて(過去も)」で表示)。</div>':'';
+    if(!runs.length){ $('admRunList').innerHTML=note+'<div class="muted">条件に合う調査はありません。</div>'; return; }
+    (function(res){
+      $('admRunList').innerHTML=note+'<table class="rp-table"><thead><tr><th>作成</th><th>種類</th><th>工場</th><th>期間</th><th>状態</th><th>入力済</th><th>差異(未解決)</th><th>未割当</th><th></th></tr></thead><tbody>'
+        +res.runs.map(function(r){ var s=r.stats||{};
+          return '<tr><td>'+esc(r.createdAt)+'<div class="muted">'+esc(r.createdBy)+'</div></td><td>'+esc(ST_KIND[r.kind]||r.kind)+'</td><td>'+esc(r.factory)+'</td>'
+            +'<td>'+esc(slash_(r.from))+(r.to!==r.from?'〜'+esc(slash_(r.to)):'')+(r.memo?'<div class="muted">'+esc(r.memo)+'</div>':'')+'</td>'
+            +'<td>'+(r.status==='締め'?'<span class="muted">締め</span>':'<b style="color:var(--pri2)">作業中</b>')+'</td>'
+            +'<td class="r">'+(s.done||0)+' / '+(s.total||0)+'</td><td class="r">'+(s.ng?'<b style="color:var(--ng)">'+s.ng+'</b>'+(s.open?'('+s.open+')':''):'0')+'</td>'
+            +'<td class="r">'+(s.unassigned?'<b style="color:#b45309">'+s.unassigned+'</b>':'0')+'</td>'
+            +'<td><button class="btn ghost rp-lg" type="button" data-run="'+esc(r.runId)+'">開く</button></td></tr>';
+        }).join('')+'</tbody></table>';
+      $('admRunList').querySelectorAll('button[data-run]').forEach(function(b){ b.addEventListener('click', function(){ admOpenRun_(b.dataset.run); }); });
+    })({ runs:runs });
+  }
+  function admOpenRun_(runId){
+    admView_('run'); $('admRun').innerHTML='<div class="muted">読み込み中…</div>';
+    api('stRunDetail',{ runId:runId }).then(function(res){
+      if(!res || !res.ok){ $('admRun').innerHTML='<div class="banner ng">'+esc((res&&res.message)||'取得に失敗しました')+'</div>'; return; }
+      ST.run=res; admRenderRun_();
+    }).catch(function(e){ $('admRun').innerHTML='<div class="banner ng">エラー: '+esc(e)+'</div>'; });
+  }
+  var ST_DEPT = '製造部';   // 棚卸をするのは製造部だけ → 担当者の候補は製造部の人に絞る
+  function stStaff_(keepId){
+    return ((ST.meta && ST.meta.staff) || []).filter(function(s){ return s.dept===ST_DEPT || (keepId && s.id===keepId); });
+  }
+  function admStaffOpts_(sel){
+    return '<option value="">(未割当)</option>'+stStaff_(sel).map(function(s){ return '<option value="'+esc(s.id)+'"'+(s.id===sel?' selected':'')+'>'+esc(s.name)+(s.dept!==ST_DEPT?'('+esc(s.dept||'部署なし')+')':'')+'</option>'; }).join('');
+  }
+  function admRenderRun_(){
+    var d=ST.run, r=d.run, s=d.stats, lines=d.lines;
+    // エリアごと
+    var areas={}, order=[];
+    lines.forEach(function(l){ var a=l.area||''; if(!areas[a]){ areas[a]={ n:0, done:0, staff:{} }; order.push(a); } var x=areas[a]; x.n++; if(l.status) x.done++; x.staff[l.staffId||'']=(x.staff[l.staffId||'']||0)+1; });
+    order.sort(function(a,b){ var ka=a?String(a).replace(/\d+/g,function(n){ return ('000000'+n).slice(-6); }):'~', kb=b?String(b).replace(/\d+/g,function(n){ return ('000000'+n).slice(-6); }):'~'; return ka<kb?-1:ka>kb?1:0; });
+    var mainStaff=function(a){ var m='', c=-1; Object.keys(areas[a].staff).forEach(function(k){ if(areas[a].staff[k]>c){ c=areas[a].staff[k]; m=k; } }); return Object.keys(areas[a].staff).length>1 ? '__mixed__' : m; };
+    // 担当者ごと
+    var people={};
+    lines.forEach(function(l){ var k=l.staffName||'(未割当)'; var p=people[k]=people[k]||{ n:0, done:0, ng:0 }; p.n++; if(l.status) p.done++; if(l.status==='差異') p.ng++; });
+    $('admRun').innerHTML =
+      '<div class="bar" style="margin:0 0 10px"><button class="btn ghost" id="arBack" type="button">← 調査の一覧</button>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="arReload" type="button">更新</button>'
+        +'<button class="btn '+(r.status==='締め'?'primary':'ghost')+'" id="arStatus" type="button">'+(r.status==='締め'?'作業中に戻す':'締める')+'</button>'
+        +'<button class="btn ghost" id="arDelete" type="button" style="color:var(--ng)">調査を削除</button></div></div>'
+      +'<div class="rp-head"><b>'+esc(ST_KIND[r.kind]||r.kind)+' '+esc(r.factory)+' ／ '+esc(slash_(r.from))+(r.to!==r.from?'〜'+esc(slash_(r.to)):'')+'</b>'
+        +'<span>'+esc(r.status)+' ／ 入力済 '+s.done+' / '+s.total+' ／ 差異 '+s.ng+'(未解決 '+s.open+') ／ 未割当 '+s.unassigned+'</span></div>'
+      +(r.memo?'<div class="muted" style="margin-bottom:8px">'+esc(r.memo)+'</div>':'')
+      +'<h3 class="adm-h">担当の割り振り(エリアごと)</h3>'
+      +(r.kind==='buhin'?'<div class="muted" style="margin-bottom:6px">部品は品目マスタの「在庫エリア担当」で自動で割り振っています。エリア単位で変えたいときだけ選び直してください。</div>':'<div class="muted" style="margin-bottom:6px">エリアごとに担当者を選んで「割り振りを保存」を押してください。</div>')
+      +'<div class="mi-bulk"><b>人数を指定して自動で割り振る</b>'
+        +'<div class="aa-wrap">'
+          +'<div class="aa-col"><div class="aa-h">① 製造部の人から選ぶ(タップで選択/解除)</div>'
+            +'<input type="text" id="arAutoQ" placeholder="名前で探す(探すだけ。選択は変わりません)">'
+            +'<div id="arAutoList" class="aa-list"></div></div>'
+          +'<div class="aa-col"><div class="aa-h">② 選んだ担当者 <span id="arAutoN">0人</span> <button class="btn ghost aa-clr" id="arAutoClr" type="button">全員はずす</button></div>'
+            +'<div id="arAutoSel" class="aa-sel"></div>'
+            +'<label class="rp-chk" style="font-size:15px;margin-top:10px"><input type="checkbox" id="arAutoOnlyEmpty"> 担当が決まっていないエリアだけ</label>'
+            +'<button class="btn primary" id="arAuto" type="button" style="margin-top:8px;width:100%">③ 選んだ人で割り振る</button></div>'
+        +'</div>'
+        +'<span class="muted" id="arAutoMsg" style="flex:1 1 100%">品目数がなるべく同じになるよう、エリア単位で振り分けます。押した時点では保存されません。下の表で確認して「割り振りを保存」を押してください。</span></div>'
+      +'<table class="rp-table"><thead><tr><th>エリア</th><th>品目数</th><th>入力済</th><th>担当</th></tr></thead><tbody>'
+      +order.map(function(a){ var ms=mainStaff(a);
+          return '<tr><td>'+esc(a||'(エリアなし)')+'</td><td class="r">'+areas[a].n+'</td><td class="r">'+areas[a].done+'</td><td><select class="ar-staff" data-area="'+esc(a)+'" data-orig="'+esc(ms)+'">'
+            +(ms==='__mixed__'?'<option value="__mixed__" selected>(品目ごとに担当あり)</option>':'')+admStaffOpts_(ms==='__mixed__'?'':ms)+'</select></td></tr>'; }).join('')
+      +'</tbody></table><div class="bar"><span class="muted" id="arAssignMsg"></span><button class="btn primary" id="arAssign" type="button">割り振りを保存</button></div>'
+      +'<h3 class="adm-h">担当者ごとの進み</h3><table class="rp-table"><thead><tr><th>担当者</th><th>件数</th><th>入力済</th><th>差異</th></tr></thead><tbody>'
+      +Object.keys(people).map(function(k){ var p=people[k]; return '<tr><td>'+esc(k)+'</td><td class="r">'+p.n+'</td><td class="r">'+p.done+(p.done===p.n?' ✔':'')+'</td><td class="r">'+(p.ng?'<b style="color:var(--ng)">'+p.ng+'</b>':'0')+'</td></tr>'; }).join('')
+      +'</tbody></table>'
+      +'<h3 class="adm-h">明細</h3><div class="bar" style="margin-top:0"><select id="arFilter" style="width:auto"><option value="ng">差異のみ</option><option value="open">未解決の差異</option><option value="todo">未入力</option><option value="all">すべて</option></select><span class="muted" id="arCount"></span></div>'
+      +'<div id="arLines" class="rp-area"></div>';
+    $('arBack').onclick=function(){ admView_('runs'); };
+    $('arReload').onclick=function(){ admOpenRun_(r.runId); };
+    $('arStatus').onclick=function(){
+      var to = r.status==='締め' ? '作業中' : '締め';
+      if(to==='締め' && !confirm('締めると担当者は入力できなくなります。締めますか？')) return;
+      api('stSetRunStatus',{ runId:r.runId, status:to }).then(function(res){ if(res&&res.ok) admOpenRun_(r.runId); else alert((res&&res.message)||'変更できませんでした'); });
+    };
+    $('arDelete').onclick=function(){
+      var adj=lines.filter(function(l){ return l.adjustId; }).length;
+      if(adj){ alert('UMの在庫を修正した明細が '+adj+'件あるため、この調査は削除できません。\n締めて残してください。'); return; }
+      var head=(ST_KIND[r.kind]||r.kind)+' '+r.factory+' '+slash_(r.from)+(r.to!==r.from?'〜'+slash_(r.to):'');
+      if(!confirm('調査「'+head+'」を削除します。\n明細 '+s.total+'件'+(s.done?('(うち実数の入力済み '+s.done+'件)'):'')+'も消え、元に戻せません。\n\n間違えて作った調査だけを削除してください。終わった調査は「締める」で残します。\n削除しますか？')) return;
+      if(s.done && !confirm('実数の入力済みが '+s.done+'件あります。担当者が入れた数も消えます。本当に削除しますか？')) return;
+      $('arDelete').disabled=true;
+      api('stDeleteRun',{ runId:r.runId }).then(function(res){
+        if(res&&res.ok){ ST.run=null; admView_('runs'); $('admMsg').className='result ok'; $('admMsg').textContent='調査「'+head+'」を削除しました(明細 '+res.deleted+'件)。'; }
+        else { $('arDelete').disabled=false; alert((res&&res.message)||'削除できませんでした'); }
+      }).catch(function(e){ $('arDelete').disabled=false; alert('エラー: '+e); });
+    };
+    $('arAssign').onclick=function(){
+      var as=[]; $('admRun').querySelectorAll('select.ar-staff').forEach(function(sel){ if(sel.value!==sel.dataset.orig && sel.value!=='__mixed__') as.push({ area:sel.dataset.area, staffId:sel.value }); });
+      if(!as.length){ $('arAssignMsg').textContent='変更はありません。'; return; }
+      $('arAssign').disabled=true; $('arAssignMsg').textContent='保存中…';
+      api('stAssign',{ runId:r.runId, assigns:as }).then(function(res){
+        $('arAssign').disabled=false;
+        if(!res || !res.ok){ $('arAssignMsg').textContent='保存できませんでした: '+((res&&res.message)||''); return; }
+        admOpenRun_(r.runId);
+      }).catch(function(e){ $('arAssign').disabled=false; $('arAssignMsg').textContent='エラー: '+e; });
+    };
+    $('admRun').querySelectorAll('select.ar-staff').forEach(function(sel){ sel.addEventListener('change', function(){ sel.classList.toggle('ar-chg', sel.value!==sel.dataset.orig); }); });
+    var aaPick=[], aaStaff=stStaff_();   // 選んだ順に保持
+    var aaDraw=function(){
+      var q=$('arAutoQ').value.replace(/[\s　]/g,'');
+      var list=aaStaff.filter(function(x){ return !q || String(x.name).replace(/[\s　]/g,'').indexOf(q)>=0; });
+      $('arAutoList').innerHTML = list.length ? list.map(function(x){ var on=aaPick.indexOf(x.id)>=0;
+          return '<button type="button" class="aa-item'+(on?' on':'')+'" data-id="'+esc(x.id)+'">'+(on?'✓ ':'')+esc(x.name)+'</button>'; }).join('')
+        : '<div class="muted">「'+esc(q)+'」に当てはまる人はいません</div>';
+      var nm={}; aaStaff.forEach(function(x){ nm[x.id]=x.name; });
+      $('arAutoSel').innerHTML = aaPick.length ? aaPick.map(function(id){ return '<span class="aa-chip">'+esc(nm[id]||id)+'<button type="button" data-id="'+esc(id)+'" aria-label="はずす">×</button></span>'; }).join('')
+        : '<span class="muted">まだ選んでいません。左の一覧から選んでください。</span>';
+      $('arAutoN').textContent=aaPick.length+'人';
+    };
+    var aaToggle=function(id){ var i=aaPick.indexOf(id); if(i>=0) aaPick.splice(i,1); else aaPick.push(id); aaDraw(); };
+    $('arAutoList').onclick=function(ev){ var b=ev.target.closest('.aa-item'); if(b) aaToggle(b.dataset.id); };
+    $('arAutoSel').onclick=function(ev){ var b=ev.target.closest('button[data-id]'); if(b) aaToggle(b.dataset.id); };
+    $('arAutoClr').onclick=function(){ aaPick=[]; aaDraw(); };
+    $('arAutoQ').oninput=aaDraw;
+    aaDraw();
+    $('arAuto').onclick=function(){
+      var ids=aaPick.slice();
+      if(!ids.length){ $('arAutoMsg').textContent='担当者を1人以上選んでください。'; return; }
+      var onlyEmpty=$('arAutoOnlyEmpty').checked;
+      var sels=[].slice.call($('admRun').querySelectorAll('select.ar-staff'));
+      var targets=sels.filter(function(x){ return !onlyEmpty || !x.value || x.value==='__mixed__'; });
+      if(!targets.length){ $('arAutoMsg').textContent='割り振るエリアがありません(すべて担当が決まっています)。'; return; }
+      var load={}; ids.forEach(function(id){ load[id]=0; });
+      if(onlyEmpty) sels.forEach(function(x){ if(targets.indexOf(x)<0 && load.hasOwnProperty(x.value)) load[x.value]+=areas[x.dataset.area].n; });
+      targets.sort(function(a,b){ return areas[b.dataset.area].n - areas[a.dataset.area].n; }).forEach(function(x){
+        var best=ids[0]; ids.forEach(function(id){ if(load[id]<load[best]) best=id; });
+        x.value=best; load[best]+=areas[x.dataset.area].n; x.classList.toggle('ar-chg', x.value!==x.dataset.orig);
+      });
+      var nm={}; ((ST.meta&&ST.meta.staff)||[]).forEach(function(x){ nm[x.id]=x.name; });
+      $('arAutoMsg').innerHTML='エリア '+targets.length+'件を '+ids.length+'人に割り振りました(<b>まだ保存されていません</b>): '+ids.map(function(id){ return esc(nm[id]||id)+' '+load[id]+'品目'; }).join('、')+'。下の表を確認して「割り振りを保存」を押してください。';
+    };
+    $('arFilter').onchange=admRenderLines_;
+    if(!s.ng) $('arFilter').value = s.done ? 'all' : 'todo';
+    admRenderLines_();
+  }
+  function admRenderLines_(){
+    var f=$('arFilter').value, all=ST.run.lines;
+    var ls=all.filter(function(l){ return f==='all' || (f==='todo'&&!l.status) || (f==='ng'&&l.status==='差異') || (f==='open'&&l.status==='差異'&&l.resolved!=='済'); });
+    ls.sort(function(a,b){ var ka=String(a.area||'~'), kb=String(b.area||'~'); if(ka!==kb) return ka<kb?-1:1; var na=parseInt(a.num,10), nb=parseInt(b.num,10); if(isNaN(na)) na=1e9; if(isNaN(nb)) nb=1e9; return (na-nb)||(a.code<b.code?-1:1); });
+    $('arCount').textContent=ls.length+'件'+(ls.length>500?'(先頭500件を表示)':'');
+    $('arLines').innerHTML='<table class="rp-table"><thead><tr><th>エリア・連番</th><th>コード</th><th>品名</th><th>担当</th><th>UM在庫</th><th>実数</th><th>差異</th><th>理由</th><th>原因</th><th>対応</th><th>解決</th><th></th><th>UMの在庫</th></tr></thead><tbody>'
+      +ls.slice(0,500).map(function(l){
+        var cls = l.status==='一致' ? ' class="tr-ok"' : (l.status==='差異' ? ' class="tr-ng"' : '');
+        var edit = l.status==='差異';
+        var rs=((ST.meta&&ST.meta.reasons)||[]).slice(); if(l.reasonCat && rs.indexOf(l.reasonCat)<0) rs.unshift(l.reasonCat);
+        var um = l.adjustId ? '<span class="ar-adj-done">修正済 '+stDiff_(l.adjustQty)+'<br><small>'+esc(l.adjustAt||'')+' '+esc(l.adjustBy||'')+'</small></span>'
+          : (edit ? '<button class="btn rp-lg ar-adj" type="button">UMを'+stDiff_(l.diff)+'修正</button>' : '');
+        return '<tr'+cls+' data-line="'+esc(l.lineId)+'"><td>'+stLoc_(l)+'</td><td class="code">'+esc(l.code)+'</td><td>'+esc(l.name)+'</td><td>'+esc(l.staffName||'(未割当)')+'</td>'
+          +'<td class="r">'+stNum_(l.um)+'</td><td class="r b">'+stNum_(l.actual)+'</td><td class="r b">'+stDiff_(l.diff)+'</td>'
+          +(edit ? '<td><select class="ar-rcat"><option value="">(選択)</option>'+rs.map(function(x){ return '<option'+(x===l.reasonCat?' selected':'')+'>'+esc(x)+'</option>'; }).join('')+'</select></td>'
+                   +'<td><input type="text" class="ar-rsn" maxlength="300" value="'+esc(l.reason||'')+'" placeholder="原因"></td>'
+                 : '<td>'+esc(l.reasonCat||'')+'</td><td>'+esc(l.reason||'')+'</td>')
+          +'<td>'+(edit?'<input type="text" class="ar-act" maxlength="300" value="'+esc(l.action||'')+'" placeholder="対応(例: 在庫修正)">':esc(l.action||''))+'</td>'
+          +'<td style="text-align:center">'+(edit?'<input type="checkbox" class="ar-res tg-cb"'+(l.resolved==='済'?' checked':'')+'>':'')+'</td>'
+          +'<td>'+(edit?'<button class="btn ghost rp-lg ar-save" type="button">保存</button>':'')+'</td><td>'+um+'</td></tr>';
+      }).join('')+'</tbody></table>';
+    $('arLines').querySelectorAll('button.ar-save').forEach(function(b){
+      b.addEventListener('click', function(){
+        var tr=b.closest('tr'), id=tr.dataset.line;
+        b.disabled=true; b.textContent='保存中';
+        api('stSaveAction',{ lineId:id, actionText:tr.querySelector('.ar-act').value, resolved:tr.querySelector('.ar-res').checked,
+                             reasonCat:tr.querySelector('.ar-rcat').value, reasonText:tr.querySelector('.ar-rsn').value }).then(function(res){
+          b.disabled=false; b.textContent='保存';
+          if(!res || !res.ok){ alert((res&&res.message)||'保存できませんでした'); return; }
+          ST.run.lines.forEach(function(l,i){ if(l.lineId===id) ST.run.lines[i]=res.line; });
+          b.textContent='保存済';
+        }).catch(function(e){ b.disabled=false; b.textContent='保存'; alert('エラー: '+e); });
+      });
+    });
+    $('arLines').querySelectorAll('button.ar-adj').forEach(function(b){
+      b.addEventListener('click', function(){
+        var tr=b.closest('tr'), id=tr.dataset.line, l=ST.run.lines.filter(function(x){ return x.lineId===id; })[0];
+        if(!l) return;
+        var d=Number(l.diff)||0;
+        if(!confirm(l.code+' '+l.name+'\nUMの在庫を '+(d>0?'+':'')+d+' 修正します。\n(在庫調整: '+(d>0?'計画外入庫':'計画外出庫')+'／仕訳区分=在庫調整／'+ST.run.run.factory+'_在庫置場／今日の日付)\n\nUMに登録されます。よろしいですか？')) return;
+        b.disabled=true; b.textContent='登録中…';
+        api('stAdjustUm',{ lineId:id }).then(function(res){
+          if(!res || !res.ok){ b.disabled=false; b.textContent='UMを'+(d>0?'+':'')+d+'修正'; alert((res&&res.message)||'登録できませんでした'); return; }
+          ST.run.lines.forEach(function(x,i){ if(x.lineId===id) ST.run.lines[i]=res.line; });
+          admRenderLines_();
+        }).catch(function(e){ b.disabled=false; b.textContent='UMを修正'; alert('エラー: '+e); });
+      });
+    });
+  }
+
+  /* --- マスタ --- */
+  function admMaster_(key){
+    document.querySelectorAll('#admMaster .adm-sub [data-mk]').forEach(function(b){ b.classList.toggle('active', b.dataset.mk===key); });
+    var body=$('admMasterBody');
+    ST.masterKey=key;   // 後から届いた別画面の読み込み結果で上書きしないため
+    if(key==='items'){ admItems_(); return; }
+    var defs={
+      reasons:{ title:'理由分類(数が合わないときに選ぶ理由)', cols:[['name','分類','text'],['order','並び順','number'],['active','有効','active']] },
+      areas:{ title:'エリア(棚卸の置き場所の一覧)', cols:[['factory','工場','factory'],['kind','種類','kind'],['area','エリア','text'],['order','並び順','number'],['active','有効','active']] },
+      admins:{ title:'管理者(棚卸管理タブを使える人)', cols:[['email','メール(@moritaalumi.co.jp)','text'],['name','名前','text']] }
+    };
+    var d=defs[key];
+    body.innerHTML='<div class="muted">読み込み中…</div>';
+    api('stMasterRead',{ key:key }).then(function(r){
+      if(ST.masterKey!==key) return;
+      if(!r || !r.ok){ body.innerHTML='<div class="banner ng">'+esc((r&&r.message)||'取得に失敗しました')+'</div>'; return; }
+      return (function(list){
+        var cell=function(c,v){
+          if(c[2]==='active') return '<select data-k="'+c[0]+'"><option value=""'+(v!=='無効'?' selected':'')+'>有効</option><option value="無効"'+(v==='無効'?' selected':'')+'>無効</option></select>';
+          if(c[2]==='factory') return '<select data-k="'+c[0]+'">'+['本社工場','阪南工場'].map(function(x){ return '<option'+(x===v?' selected':'')+'>'+x+'</option>'; }).join('')+'</select>';
+          if(c[2]==='kind') return '<select data-k="'+c[0]+'">'+['形材','部品','完成品'].map(function(x){ return '<option'+(x===v?' selected':'')+'>'+x+'</option>'; }).join('')+'</select>';
+          return '<input type="'+(c[2]==='number'?'number':'text')+'" data-k="'+c[0]+'" value="'+esc(v==null?'':v)+'">';
+        };
+        var rowHtml=function(o){ return '<tr>'+d.cols.map(function(c){ return '<td>'+cell(c,o[c[0]])+'</td>'; }).join('')+'<td><button class="btn x m-del" type="button" title="削除">×</button></td></tr>'; };
+        body.innerHTML='<h3 class="adm-h">'+esc(d.title)+'</h3>'
+          +(key==='areas'?'<div class="mi-bulk"><b>絞り込み(見出しをクリックすると並べ替え)</b><span><label>工場</label><select id="mfF"><option value="">すべて</option><option>本社工場</option><option>阪南工場</option></select></span>'
+            +'<span><label>種類</label><select id="mfK"><option value="">すべて</option><option>形材</option><option>部品</option><option>完成品</option></select></span>'
+            +'<span><label>エリア名</label><input type="text" id="mfQ" placeholder="例: U-"></span><span class="muted" id="mfCount" style="align-self:center"></span></div>'
+            :'<div class="muted" style="margin-bottom:6px">見出しをクリックすると並べ替えます。</div>')
+          +'<table class="rp-table m-table"><thead><tr>'+d.cols.map(function(c){ return '<th class="m-sort" data-k="'+c[0]+'" data-t="'+c[2]+'">'+esc(c[1])+' <span class="m-arrow"></span></th>'; }).join('')+'<th></th></tr></thead><tbody>'
+          +list.map(rowHtml).join('')+'</tbody></table>'
+          +'<div class="bar"><button class="btn ghost" id="mAdd" type="button">＋ 行を追加</button><span class="muted" id="mMsg"></span><button class="btn primary" id="mSave" type="button">保存</button></div>';
+        var tb=body.querySelector('tbody');
+        var wireDel=function(){ tb.querySelectorAll('.m-del').forEach(function(b){ b.onclick=function(){ b.closest('tr').remove(); }; }); };
+        wireDel();
+        $('mAdd').onclick=function(){
+          var o={}; if(key==='reasons'||key==='areas') o.order=tb.children.length+1;
+          if(key==='areas'){ if($('mfF').value) o.factory=$('mfF').value; if($('mfK').value) o.kind=$('mfK').value; }   // 絞り込み中の工場・種類を初期値に
+          tb.insertAdjacentHTML('beforeend', rowHtml(o)); wireDel();
+          var last=tb.lastElementChild; last.style.display=''; last.scrollIntoView({ block:'center' }); var fi=last.querySelector('input[type=text]'); if(fi) fi.focus();
+        };
+        var val=function(tr,k){ var el=tr.querySelector('[data-k="'+k+'"]'); return el ? el.value : ''; };
+        var applyF=function(){
+          if(key!=='areas') return;
+          var f=$('mfF').value, k=$('mfK').value, q=$('mfQ').value.trim(), n=0;
+          [].forEach.call(tb.querySelectorAll('tr'), function(tr){ var ok=(!f||val(tr,'factory')===f)&&(!k||val(tr,'kind')===k)&&(!q||val(tr,'area').indexOf(q)>=0); tr.style.display=ok?'':'none'; if(ok) n++; });
+          $('mfCount').textContent=n+'件表示 ／ 全'+tb.children.length+'件';
+        };
+        if(key==='areas'){ $('mfF').onchange=applyF; $('mfK').onchange=applyF; $('mfQ').oninput=applyF; applyF(); }
+        var sortState={ k:'', dir:1 };
+        body.querySelectorAll('th.m-sort').forEach(function(th){
+          th.onclick=function(){
+            var k=th.dataset.k, num=th.dataset.t==='number';
+            sortState.dir = (sortState.k===k) ? -sortState.dir : 1; sortState.k=k;
+            var rows=[].slice.call(tb.querySelectorAll('tr'));
+            rows.sort(function(a,b){ var x=val(a,k), y=val(b,k); var c = num ? ((Number(x)||0)-(Number(y)||0)) : String(x).localeCompare(String(y), 'ja', { numeric:true }); return c*sortState.dir; });
+            rows.forEach(function(tr){ tb.appendChild(tr); });
+            body.querySelectorAll('th.m-sort .m-arrow').forEach(function(sp){ sp.textContent=''; });
+            th.querySelector('.m-arrow').textContent = sortState.dir>0 ? '▲' : '▼';
+          };
+        });
+        $('mSave').onclick=function(){
+          var rows=[].map.call(tb.querySelectorAll('tr'), function(tr){ var o={}; tr.querySelectorAll('[data-k]').forEach(function(el){ o[el.dataset.k]=el.value; }); return o; });
+          $('mSave').disabled=true; $('mMsg').textContent='保存中…';
+          api('stSaveMaster',{ key:key, rows:rows }).then(function(res){
+            $('mSave').disabled=false;
+            $('mMsg').textContent = (res&&res.ok) ? (res.count+'件を保存しました。') : ('保存できませんでした: '+((res&&res.message)||''));
+            if(res&&res.ok){ ST.meta=null; stLoadMeta_(); }
+          }).catch(function(e){ $('mSave').disabled=false; $('mMsg').textContent='エラー: '+e; });
+        };
+      })(r.rows);
+    }).catch(function(e){ body.innerHTML='<div class="banner ng">エラー: '+esc(e)+'</div>'; });
+  }
+  function admItems_(){
+    var body=$('admMasterBody');
+    body.innerHTML='<h3 class="adm-h">品目の紐づけ(棚卸対象・エリア・連番・部品の担当)</h3>'
+      +'<div class="muted" style="margin-bottom:8px">UMの品目マスタを直接更新します。右端の<b>「棚卸対象」にチェックがある品目だけ</b>が棚卸表と調査に載ります。変更した行は黄色になり、「保存」でまとめて反映します。</div>'
+      +'<div class="grid"><div><label>種類</label><select id="miKind"><option value="katazai">形材</option><option value="buhin">部品</option><option value="kansei">完成品</option></select></div>'
+      +'<div><label>棚卸対象</label><select id="miTarget"><option value="">すべて</option><option value="on">対象だけ</option><option value="off">対象外だけ</option></select></div>'
+      +'<div><label>エリアで絞り込み</label><select id="miArea"><option value="">すべて</option></select></div>'
+      +'<div><label>中分類で絞り込み</label><select id="miGroup"><option value="">すべて</option></select></div>'
+      +'<div id="miSubWrap"><label>小分類で絞り込み</label><select id="miSub"><option value="">すべて</option></select></div>'
+      +'<div id="miPersonWrap"><label>担当で絞り込み(部品)</label><select id="miPerson"><option value="">すべて</option></select></div>'
+      +'<div><label>コード・品名で絞り込み</label><input type="text" id="miQ" placeholder="例: K001 / 50角"></div></div>'
+      +'<div class="mi-bulk"><b>選択した品目をまとめて設定 <span class="mi-selcount" id="miSelCount">選択 0件</span></b>'
+        +'<button class="btn ghost" id="miSelAllBtn" type="button">表示中をすべて選択</button><button class="btn ghost" id="miSelClear" type="button">選択を解除</button>'
+        +'<span class="mi-gap"></span>'
+        +'<button class="btn ghost mi-add" id="miAddTarget" type="button">＋ 棚卸対象に追加</button><button class="btn ghost mi-del" id="miDelTarget" type="button">− 棚卸対象から削除</button>'
+        +'<span class="mi-break"></span>'
+        +'<span><label>エリア</label><select id="miBulkArea"></select></span>'
+        +'<span id="miBulkPersonWrap"><label>担当(部品)</label><select id="miBulkPerson"></select></span>'
+        +'<button class="btn ghost" id="miBulkApply" type="button">選択した品目に当てはめる</button>'
+        +'<span class="muted" style="flex:1 1 100%">左端の「選択」で品目を選んでから使います(右端の「棚卸対象」チェックとは別です)。押した時点では保存されず、黄色の行を確認して「保存」で反映します。</span></div>'
+      +'<div class="mi-bulk"><b>Excelで一括登録・削除</b>'
+        +'<button class="btn ghost" id="miExport" type="button">今の一覧をExcelに書き出す</button>'
+        +'<label class="btn ghost mi-file">Excelから取り込む<input type="file" id="miImport" accept=".xlsx,.xls,.csv" hidden></label>'
+        +'<span class="muted" style="flex:1 1 100%">書き出したExcelの「棚卸対象」列に ○(追加)/×(削除)、エリア・連番・担当を書き換えて取り込みます。品目コードで照合し、<b>空欄の項目は変更しません</b>。取り込むと変更が黄色で並ぶので、確認して「保存」してください。</span></div>'
+      +'<div class="bar"><span class="muted" id="miCount"></span><div style="display:flex;gap:8px;align-items:center"><span class="muted" id="miMsg"></span><button class="btn primary" id="miSave" type="button" disabled>保存</button></div></div>'
+      +'<div id="miImportMsg"></div><div id="miList" class="rp-area"></div>';
+    var CH={}, SEL={};
+    var kindName=function(){ return ({ katazai:'形材', buhin:'部品', kansei:'完成品' })[ST.itemKind]; };
+    var cur=function(it, k){ var c=CH[it.id]; return (c && c[k]!==undefined) ? c[k] : it[k]; };   // 変更後の値
+    var areaKeyJs=function(a){ return a ? String(a).replace(/\d+/g, function(n){ return ('000000'+n).slice(-6); }) : '~'; };
+    var areaList=function(){   // この種類のエリア(エリアマスタの有効分＋品目に付いている名前)
+      var kn=kindName(), seen={}, list=[];
+      ((ST.meta&&ST.meta.areas)||[]).filter(function(a){ return a.kind===kn && a.active!=='無効' && a.area; })
+        .sort(function(a,b){ return (Number(a.order)||0)-(Number(b.order)||0) || (areaKeyJs(a.area)<areaKeyJs(b.area)?-1:1); })
+        .forEach(function(a){ if(!seen[a.area]){ seen[a.area]=1; list.push(a.area); } });
+      var extra=[]; (ST.items||[]).forEach(function(i){ var a=cur(i,'area'); if(a && !seen[a]){ seen[a]=1; extra.push(a); } });
+      extra.sort(function(a,b){ return areaKeyJs(a)<areaKeyJs(b)?-1:1; });
+      return { master:list, extra:extra };
+    };
+    var areaOpts=function(sel, blankLabel){
+      var L=areaList();
+      return '<option value="">'+esc(blankLabel)+'</option>'+L.master.map(function(a){ return '<option'+(a===sel?' selected':'')+'>'+esc(a)+'</option>'; }).join('')
+        +(L.extra.length?'<optgroup label="エリアマスタに無い名前">'+L.extra.map(function(a){ return '<option'+(a===sel?' selected':'')+'>'+esc(a)+'</option>'; }).join('')+'</optgroup>':'');
+    };
+    var load=function(){
+      $('miList').innerHTML='<div class="muted">読み込み中…</div>'; CH={}; SEL={}; $('miSave').disabled=true; $('miMsg').textContent=''; $('miImportMsg').innerHTML='';
+      var kindAsked=$('miKind').value;
+      api('stItemList',{ kind:kindAsked }).then(function(res){
+        if(ST.masterKey!=='items' || !$('miKind') || $('miKind').value!==kindAsked) return;   // 別画面・別種類に切り替え済み
+        if(!res || !res.ok){ $('miList').innerHTML='<div class="banner ng">'+esc((res&&res.message)||'取得に失敗しました')+'</div>'; return; }
+        ST.items=res.items; ST.itemKind=kindAsked;
+        var L=areaList();
+        $('miArea').innerHTML='<option value="">すべて</option><option value="__none__">(エリア未設定)</option>'+L.master.concat(L.extra).map(function(a){ return '<option>'+esc(a)+'</option>'; }).join('');
+        $('miBulkArea').innerHTML=areaOpts('', '(変えない)');
+        var cnt=function(k){ var m={}; ST.items.forEach(function(i){ var v=i[k]||''; m[v]=(m[v]||0)+1; }); return m; };
+        var optsOf=function(m, noneLabel){   // 件数の多い順。未設定は最後
+          return '<option value="">すべて</option>'+Object.keys(m).filter(function(v){ return v; }).sort(function(a,b){ return (m[b]-m[a]) || (a<b?-1:1); })
+            .map(function(v){ return '<option value="'+esc(v)+'">'+esc(v)+'('+m[v]+')</option>'; }).join('')+(m['']?'<option value="__none__">'+noneLabel+'('+m['']+')</option>':'');
+        };
+        var gm=cnt('group'), sm=cnt('sub');
+        $('miGroup').innerHTML=optsOf(gm, '(中分類なし)');
+        $('miSub').innerHTML=optsOf(sm, '(小分類なし)');
+        $('miSubWrap').style.display = Object.keys(sm).some(function(v){ return v; }) ? '' : 'none';   // 小分類は製品にしか付いていない
+        var pm={}; ST.items.forEach(function(i){ var k=i.personId||''; if(!pm[k]) pm[k]={ n:0, name:i.personName||'' }; pm[k].n++; });
+        $('miPerson').innerHTML='<option value="">すべて</option>'+Object.keys(pm).filter(function(k){ return k; }).sort(function(a,b){ return pm[a].name<pm[b].name?-1:1; })
+          .map(function(k){ return '<option value="'+esc(k)+'">'+esc(pm[k].name)+'('+pm[k].n+')</option>'; }).join('')+(pm['']?'<option value="__none__">(担当なし)('+pm[''].n+')</option>':'');
+        $('miPersonWrap').style.display = kindAsked==='buhin' ? '' : 'none';
+        $('miBulkPerson').innerHTML='<option value="__keep__">(変えない)</option>'+admStaffOpts_('');
+        render();
+      }).catch(function(e){ $('miList').innerHTML='<div class="banner ng">エラー: '+esc(e)+'</div>'; });
+    };
+    var visible=function(){
+      var a=$('miArea').value, q=($('miQ').value||'').trim().toLowerCase(), t=$('miTarget').value;
+      var g=$('miGroup').value, sb=$('miSub').value, pp=ST.itemKind==='buhin' ? $('miPerson').value : '';
+      var eq=function(sel, v){ return !sel || (sel==='__none__' ? !v : v===sel); };
+      return ST.items.filter(function(i){
+        if(!eq(g, i.group) || !eq(sb, i.sub) || !eq(pp, cur(i,'personId'))) return false;
+        if(a==='__none__' && cur(i,'area')) return false; if(a && a!=='__none__' && cur(i,'area')!==a) return false;
+        if(t==='on' && !cur(i,'target')) return false; if(t==='off' && cur(i,'target')) return false;
+        if(q && (i.code+' '+i.name).toLowerCase().indexOf(q)<0) return false; return true;
+      });
+    };
+    var setCh=function(it, k, v){   // 元の値と同じなら変更から外す
+      var c=CH[it.id]||{}, orig = k==='num' ? String(it.num) : it[k];
+      if(k==='num') v=String(v);
+      if(v===orig) delete c[k]; else c[k]=v;
+      if(Object.keys(c).length) CH[it.id]=c; else delete CH[it.id];
+    };
+    var updCount=function(){ var n=Object.keys(CH).length; $('miSave').disabled=!n; $('miMsg').textContent=n?('未保存 '+n+'件'):''; $('miSelCount').textContent='選択 '+Object.keys(SEL).length+'件'; };
+    var selected=function(){ return ST.items.filter(function(i){ return SEL[i.id]; }); };
+    var render=function(){
+      var isB=ST.itemKind==='buhin';
+      $('miBulkPersonWrap').style.display = isB ? '' : 'none';
+      var vis=visible(), on=ST.items.filter(function(i){ return cur(i,'target'); }).length;
+      $('miCount').textContent=vis.length+'件表示 ／ 棚卸対象 '+on+' / '+ST.items.length+'件'+(vis.length>500?'(先頭500件を表示。絞り込んでください)':'');
+      var allSel = vis.length && vis.slice(0,500).every(function(i){ return SEL[i.id]; });
+      $('miList').innerHTML='<table class="rp-table mi-table"><thead><tr><th class="mi-selcol"><label><input type="checkbox" id="miSelAll" class="tg-cb"'+(allSel?' checked':'')+'> 選択</label></th><th>コード</th><th>品名</th><th>エリア</th><th>連番</th>'+(isB?'<th>担当</th>':'')+'<th class="mi-gapcol"></th><th class="mi-tgtcol">棚卸対象</th></tr></thead><tbody>'
+        +vis.slice(0,500).map(function(i){
+          return '<tr data-id="'+esc(i.id)+'" class="'+(CH[i.id]?'tg-chg ':'')+(SEL[i.id]?'mi-sel':'')+'"><td class="mi-selcol"><input type="checkbox" class="mi-pick tg-cb"'+(SEL[i.id]?' checked':'')+' aria-label="選択"></td>'
+            +'<td class="code">'+esc(i.code)+'</td><td>'+esc(i.name)+(i.group?'<div class="mi-grp">'+esc(i.group)+(i.sub?' ／ '+esc(i.sub):'')+'</div>':'')+'</td>'
+            +'<td><select class="mi-area">'+areaOpts(cur(i,'area'), '(未設定)')+'</select></td><td><input type="text" class="mi-num" style="max-width:120px" value="'+esc(cur(i,'num'))+'"></td>'
+            +(isB?'<td><select class="mi-person">'+admStaffOpts_(cur(i,'personId'))+'</select></td>':'')
+            +'<td class="mi-gapcol"></td><td class="mi-tgtcol"><label class="mi-tgt"><input type="checkbox" class="mi-target tg-cb"'+(cur(i,'target')?' checked':'')+'> '+(cur(i,'target')?'対象':'対象外')+'</label></td></tr>'; }).join('')+'</tbody></table>';
+      $('miSelAll').onchange=function(){ var on=this.checked; vis.slice(0,500).forEach(function(i){ if(on) SEL[i.id]=1; else delete SEL[i.id]; }); render(); };
+      $('miList').querySelectorAll('tr[data-id]').forEach(function(tr){
+        var id=tr.dataset.id, it=ST.items.filter(function(x){ return x.id===id; })[0];
+        tr.querySelector('.mi-pick').addEventListener('change', function(){ if(this.checked) SEL[id]=1; else delete SEL[id]; tr.classList.toggle('mi-sel', !!SEL[id]); updCount(); });
+        var upd=function(){
+          setCh(it,'target', tr.querySelector('.mi-target').checked);
+          setCh(it,'area', tr.querySelector('.mi-area').value);
+          setCh(it,'num', tr.querySelector('.mi-num').value.trim());
+          var ps=tr.querySelector('.mi-person'); if(ps) setCh(it,'personId', ps.value);
+          tr.classList.toggle('tg-chg', !!CH[id]);
+          var lb=tr.querySelector('.mi-tgt'); lb.lastChild.textContent=' '+(cur(it,'target')?'対象':'対象外');
+          updCount();
+        };
+        tr.querySelectorAll('.mi-target,.mi-area,.mi-num,.mi-person').forEach(function(el){ el.addEventListener('change', upd); });
+      });
+      updCount();
+    };
+    $('miKind').onchange=load;
+    $('miArea').onchange=render; $('miTarget').onchange=render; $('miGroup').onchange=render; $('miSub').onchange=render; $('miPerson').onchange=render;
+    var t=null; $('miQ').oninput=function(){ clearTimeout(t); t=setTimeout(render,200); };
+    $('miSelAllBtn').onclick=function(){ visible().forEach(function(i){ SEL[i.id]=1; }); render(); };
+    $('miSelClear').onclick=function(){ SEL={}; render(); };
+    var needSel=function(){ var s=selected(); if(!s.length){ $('miMsg').textContent='左端の「選択」で品目を選んでください。'; return null; } return s; };
+    $('miAddTarget').onclick=function(){ var s=needSel(); if(!s) return; s.forEach(function(it){ setCh(it,'target',true); }); render(); $('miMsg').textContent='選択した '+s.length+'件を棚卸対象に追加します(未保存 '+Object.keys(CH).length+'件)'; };
+    $('miDelTarget').onclick=function(){ var s=needSel(); if(!s) return; s.forEach(function(it){ setCh(it,'target',false); }); render(); $('miMsg').textContent='選択した '+s.length+'件を棚卸対象から削除します(未保存 '+Object.keys(CH).length+'件)'; };
+    $('miBulkApply').onclick=function(){
+      var s=needSel(); if(!s) return;
+      var area=$('miBulkArea').value, isB=ST.itemKind==='buhin', person=isB ? $('miBulkPerson').value : '__keep__';
+      if(!area && person==='__keep__'){ $('miMsg').textContent='エリアか担当を選んでください。'; return; }
+      s.forEach(function(it){ if(area) setCh(it,'area',area); if(person!=='__keep__') setCh(it,'personId',person); });
+      render();
+    };
+    // --- Excel 書き出し/取り込み ---
+    $('miExport').onclick=function(){
+      if(!ST.items) return;
+      loadXlsx_().then(function(){
+        var isB=ST.itemKind==='buhin', vis=visible();
+        var aoa=[['品目コード','品名','棚卸対象','エリア','連番'].concat(isB?['担当']:[]).concat(['中分類'])];
+        vis.forEach(function(i){ var pid=cur(i,'personId'), pn=pid ? ((ST.meta.staff||[]).filter(function(s){ return s.id===pid; })[0]||{}).name || i.personName : '';
+          aoa.push([i.code, i.name, cur(i,'target')?'○':'×', cur(i,'area'), cur(i,'num')].concat(isB?[pn]:[]).concat([i.group||''])); });
+        var ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:12},{wch:44},{wch:9},{wch:18},{wch:14},{wch:14}];
+        var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, kindName()+'の品目');
+        XLSX.writeFile(wb, '棚卸_品目の紐づけ_'+kindName()+'.xlsx');
+      }).catch(function(e){ $('miMsg').textContent='エラー: '+e; });
+    };
+    $('miImport').onchange=function(){
+      var f=this.files && this.files[0]; this.value='';
+      if(!f || !ST.items) return;
+      $('miImportMsg').innerHTML='<div class="muted">読み込み中…</div>';
+      loadXlsx_().then(function(){ return f.arrayBuffer(); }).then(function(buf){
+        var wb=XLSX.read(buf, { type:'array' }), ws=wb.Sheets[wb.SheetNames[0]];
+        var rows=XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+        var hi=-1; for(var r=0;r<Math.min(rows.length,10);r++){ if(rows[r].some(function(v){ return String(v).trim()==='品目コード'; })){ hi=r; break; } }
+        if(hi<0) throw '「品目コード」の見出しが見つかりません。書き出したExcelの形で取り込んでください。';
+        var H=rows[hi].map(function(v){ return String(v).trim(); }), col=function(n){ return H.indexOf(n); };
+        var cC=col('品目コード'), cT=col('棚卸対象'), cA=col('エリア'), cN=col('連番'), cP=col('担当');
+        var byCode={}; ST.items.forEach(function(i){ byCode[String(i.code).toUpperCase()]=i; });
+        var staffByName={}; ((ST.meta&&ST.meta.staff)||[]).forEach(function(s){ staffByName[String(s.name).replace(/[\s　]/g,'')]=s.id; });
+        var known={}; areaList().master.forEach(function(a){ known[a]=1; });
+        var notFound=[], badPerson=[], badTarget=[], newArea={}, touched=0;
+        for(var k=hi+1;k<rows.length;k++){
+          var row=rows[k], code=String(row[cC]||'').trim().toUpperCase(); if(!code) continue;
+          var it=byCode[code]; if(!it){ notFound.push(code); continue; }
+          var before=JSON.stringify(CH[it.id]||{});
+          if(cT>=0){ var tv=String(row[cT]).trim();
+            if(/^(○|〇|◯|o|O|1|対象|追加|はい|yes|true)$/i.test(tv)) setCh(it,'target',true);
+            else if(/^(×|✕|x|X|0|対象外|削除|外す|いいえ|no|false|-)$/i.test(tv)) setCh(it,'target',false);
+            else if(tv) badTarget.push(code+':'+tv); }
+          if(cA>=0 && String(row[cA]).trim()!==''){ var av=String(row[cA]).trim(); setCh(it,'area', av); if(!known[av]) newArea[av]=1; }
+          if(cN>=0 && String(row[cN]).trim()!=='') setCh(it,'num', String(row[cN]).trim());
+          if(cP>=0 && ST.itemKind==='buhin' && String(row[cP]).trim()!==''){ var pid=staffByName[String(row[cP]).replace(/[\s　]/g,'')]; if(pid) setCh(it,'personId',pid); else badPerson.push(code+':'+row[cP]); }
+          if(JSON.stringify(CH[it.id]||{})!==before) touched++;
+        }
+        $('miTarget').value=''; $('miArea').value=''; $('miQ').value='';
+        render();
+        var na=Object.keys(newArea);
+        $('miImportMsg').innerHTML='<div class="banner '+(notFound.length||badPerson.length||badTarget.length||na.length?'warn':'ok')+'">取り込みました: 変更 '+touched+'件(未保存 合計 '+Object.keys(CH).length+'件)。内容を確認して「保存」を押してください。'
+          +(notFound.length?'<br>この種類に見つからない品目コード '+notFound.length+'件: '+esc(notFound.slice(0,20).join(', '))+(notFound.length>20?' …':''):'')
+          +(na.length?'<br>エリアマスタに無いエリア名 '+na.length+'件(このまま保存できますが、エリアマスタへの追加をおすすめします): '+esc(na.slice(0,10).join(', ')):'')
+          +(badPerson.length?'<br>担当者マスタに見つからない担当 '+badPerson.length+'件: '+esc(badPerson.slice(0,10).join(', ')):'')
+          +(badTarget.length?'<br>棚卸対象が ○/× 以外 '+badTarget.length+'件(無視しました): '+esc(badTarget.slice(0,10).join(', ')):'')+'</div>';
+      }).catch(function(e){ $('miImportMsg').innerHTML='<div class="banner ng">取り込めませんでした: '+esc(e)+'</div>'; });
+    };
+    $('miSave').onclick=function(){
+      var changes=Object.keys(CH).map(function(id){ var c=JSON.parse(JSON.stringify(CH[id])); c.itemId=id; return c; });
+      if(!changes.length) return;
+      var on=changes.filter(function(c){ return c.target===true; }).length, off=changes.filter(function(c){ return c.target===false; }).length;
+      if(!confirm(changes.length+'件の品目をUMの品目マスタに反映します'+(on||off?'(棚卸対象に追加 '+on+'件・削除 '+off+'件)':'')+'。よろしいですか？')) return;
+      $('miSave').disabled=true; $('miMsg').textContent='保存中…';
+      api('stSaveItems',{ changes:changes }).then(function(res){
+        if(!res || (!res.ok && !res.updated)){ $('miSave').disabled=false; $('miMsg').textContent='保存できませんでした: '+((res&&res.message)||''); return; }
+        $('miMsg').textContent=res.updated+'件を保存しました'+((res.errors||[]).length?('('+res.errors.length+'件は失敗)'):'')+'。'; load();
+      }).catch(function(e){ $('miSave').disabled=false; $('miMsg').textContent='エラー: '+e; });
+    };
+    load();
+  }
+
   /* ===== セッション(GAS発行のHMACトークン。Google IDトークンの1時間制限を回避) ===== */
   function b64urlToJson_(b64){ try{ var p=b64.replace(/-/g,'+').replace(/_/g,'/'); while(p.length%4)p+='='; return JSON.parse(decodeURIComponent(atob(p).split('').map(function(c){return '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2);}).join(''))); }catch(e){ return null; } }
   function parseSession_(tok){ return tok ? b64urlToJson_(tok.split('.')[0]) : null; }
@@ -615,7 +1481,7 @@
   /* セッション失効時: Google自動選択で“無操作”再認証を試す(数秒で諦める) */
   function trySilentReauth_(){
     return new Promise(function(resolve){
-      if(!(window.google && google.accounts && google.accounts.id)){ resolve(false); return; }
+      if(USE_GAS_LOGIN || !(window.google && google.accounts && google.accounts.id)){ resolve(false); return; }
       var settled=false; function settle(v){ if(settled) return; settled=true; pendingAuth_=null; resolve(v); }
       pendingAuth_ = { resolve: settle };
       try{ google.accounts.id.prompt(); }catch(e){ settle(false); return; }
@@ -623,7 +1489,7 @@
     });
   }
   /* 失効を検知したら: 画面は消さず入力を保持したまま、上部に再サインインを促す */
-  function handleAuthLost_(){ $('relogin').hidden=false; try{ google.accounts.id.prompt(); }catch(e){} }
+  function handleAuthLost_(){ $('relogin').hidden=false; if(!USE_GAS_LOGIN){ try{ google.accounts.id.prompt(); }catch(e){} } }
   function refreshInit_(){ api('init',{}).then(onInit).catch(function(){}); }
   /* ユーザー切替: セッション破棄→自動選択を止めて別アカウントでサインインし直す(共有端末・棚卸の担当交代用) */
   function switchUser_(){
@@ -636,14 +1502,57 @@
     try{ google.accounts.id.disableAutoSelect(); }catch(e){}   // 次回は自動選択せずアカウント選択させる
     $('who').textContent='';
     $('app').hidden=true; $('relogin').hidden=true; $('signin').hidden=false;
-    $('signinMsg').textContent='別のアカウントでサインインしてください。';
-    try{ google.accounts.id.prompt(); }catch(e){}
+    $('signinMsg').textContent = USE_GAS_LOGIN ? '別の人がログインします。「Googleでログイン」を押し、表示されたアカウント一覧から選んでください。' : '別のアカウントでサインインしてください。';
+    SWITCHING_ = true;
+    if(!USE_GAS_LOGIN){ try{ google.accounts.id.prompt(); }catch(e){} }
   }
+  var SWITCHING_ = false;
+  /* GASのログイン画面へ移動(戻り先は Sites なら /zaiko/ 入口=常に最新版)。入力途中の移管リストは一時保存して戻ったら復元 */
+  function goLogin_(){
+    if(!CONFIG.LOGIN_URL){ $('signinMsg').textContent='この環境のログイン先がまだ設定されていません(管理者に連絡してください)。'; return; }
+    if(!SWITCHING_) saveDraft_();
+    var ret = (location.pathname.indexOf('/zaiko/') >= 0) ? (location.origin + '/zaiko/') : location.href.split('#')[0];
+    var url = CONFIG.LOGIN_URL + '?login=1&return=' + encodeURIComponent(ret);
+    if(SWITCHING_) url = 'https://accounts.google.com/AccountChooser?continue=' + encodeURIComponent(url);
+    location.href = url;
+  }
+  var DRAFT_KEY = 'invtrans_draft';
+  function saveDraft_(){
+    try{
+      var lines = LINES.filter(function(l){ return l.itemId || l.qty; }).map(function(l){ return { itemId:l.itemId, code:l.code, name:l.name, qty:l.qty }; });
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ mode:MODE, lines:lines, t:Date.now() }));
+    }catch(e){}
+  }
+  function restoreDraft_(){
+    try{
+      var d = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null'); sessionStorage.removeItem(DRAFT_KEY);
+      if(!d || (Date.now() - (d.t||0)) > 30*60*1000) return;   // 30分以内のものだけ
+      if(d.lines && d.lines.length){
+        LINES = d.lines.map(function(l){ var b=blankRow(); b.itemId=l.itemId; b.code=l.code; b.name=l.name; b.qty=l.qty; return b; });
+        while(LINES.length < INIT_ROWS) LINES.push(blankRow());
+        renderRows(); updateSummary(); updateSubmitState();
+      }
+      if(d.mode) setMode(d.mode);
+    }catch(e){}
+  }
+  /* ログイン画面から #zs=トークン で戻ってきたら、セッションとして取り込んでURLから消す */
+  (function(){
+    var m = location.hash.match(/[#&]zs=([^&]+)/);
+    if(!m) return;
+    try{ localStorage.setItem(SS_KEY, decodeURIComponent(m[1])); }catch(e){}
+    try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){ location.hash=''; }
+  })();
 
   /* ===== Google サインイン → セッション発行 ===== */
   window.onload = function(){
     var saved=''; try{ saved=localStorage.getItem(SS_KEY)||''; }catch(e){}
-    if(saved){ setSession_(saved); if(sessionAlive_()){ $('signin').hidden=true; $('app').hidden=false; bootApp_(); } }
+    if(saved){ setSession_(saved); if(sessionAlive_()){ $('signin').hidden=true; $('app').hidden=false; bootApp_(); restoreDraft_(); } }
+    if(USE_GAS_LOGIN){
+      var mk=function(cls){ var b=document.createElement('button'); b.type='button'; b.className='btn primary '+cls; b.textContent='Googleでログイン'; b.addEventListener('click', goLogin_); return b; };
+      $('gbtn').appendChild(mk('login-btn'));
+      if($('rebtn')) $('rebtn').appendChild(mk('login-btn-sm'));
+      return;
+    }
     var wait = setInterval(function(){
       if (window.google && google.accounts && google.accounts.id){
         clearInterval(wait);
@@ -678,6 +1587,7 @@
   }
 
   /* ===== 初期化(サインイン成否に関わらず一度だけ) ===== */
+  (function(){ try{ if(CONFIG.ENV==='test') document.getElementById('envBadge').hidden=false; }catch(e){} })();
   function bootApp_(){ if(APP_READY) return; APP_READY=true; initApp(); }
   function initApp(){
     for (var i=0;i<INIT_ROWS;i++) LINES.push(blankRow());
@@ -694,6 +1604,9 @@
     $('tabCheck').addEventListener('click', function(){ setMode('check'); });
     $('tabCount').addEventListener('click', function(){ setMode('count'); });
     $('tabReport').addEventListener('click', function(){ setMode('report'); });
+    $('tabAdmin').addEventListener('click', function(){ setMode('admin'); });
+    wireMy_(); wireAdmin_();
+    document.querySelectorAll('#admMaster .adm-sub [data-mk]').forEach(function(b){ b.addEventListener('click', function(){ admMaster_(b.dataset.mk); }); });
     $('tabPo').addEventListener('click', function(){ setMode('po'); setTimeout(function(){ $('poInput').focus(); }, 50); });
     wirePo();
     $('tabSelect').addEventListener('change', function(){ var v=$('tabSelect').value; setMode(v); if(v==='po') setTimeout(function(){ $('poInput').focus(); }, 50); });
@@ -736,6 +1649,7 @@
     if (d.myStaffId){ $('staff').value=d.myStaffId; $('staff').disabled=true; setWhoRow('担当者(自動選択・固定): '+d.myName + (d.myWorkPlace?('  ／ 勤務地: '+d.myWorkPlace):'')); }
     else { $('staff').disabled=false; setWhoRow('担当者が未登録です。手動で選択してください。'); }
     setMode(MODE);   // 読み込み中に別タブへ移っていても、そのタブのまま(在庫移管へ戻さない)
+    stLoadMeta_();   // 棚卸: 管理者なら「棚卸管理」タブを出す・理由分類を取得
   }
   function setWhoRow(m, ng){ var w=$('whoRow'); w.textContent=m; w.style.color = ng?'var(--ng)':'var(--mut)'; }
 
@@ -831,9 +1745,9 @@
   }
   function setScanMsg(m){ $('scanMsg').textContent=m; }
   function beep(){ try{ var c=new (window.AudioContext||window.webkitAudioContext)(); var o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value=880; g.gain.value=0.05; o.start(); setTimeout(function(){o.stop();c.close();},110); }catch(e){} }
-  function onScan(text){ text=(text||'').trim(); if(!text) return; var now=Date.now(); if(text===lastScan.code && (now-lastScan.t)<2500) return; lastScan={code:text,t:now}; beep(); setScanMsg('読取: '+text+' → 照合中…'); api('resolveCode',{code:text, materialOnly: MODE==='count'}).then(onResolved).catch(function(e){ setScanMsg('エラー: '+e); }); }
+  function onScan(text){ text=(text||'').trim(); if(!text) return; var now=Date.now(); if(text===lastScan.code && (now-lastScan.t)<2500) return; lastScan={code:text,t:now}; beep(); setScanMsg('読取: '+text+' → 照合中…'); api('resolveCode',{code:text, materialOnly: false}).then(onResolved).catch(function(e){ setScanMsg('エラー: '+e); }); }
   function onResolved(res){ hidePick(); if(res && res.ok===false && res.message){ setScanMsg(res.message); return; } if(!res||!res.items||!res.items.length){ setScanMsg('該当なし: '+((res&&res.scanned)||'')+'(未登録の可能性)'); return; } if(res.items.length===1){ var it=res.items[0]; handlePicked(it); setScanMsg((MODE==='check'?'在庫照会: ':'✓ 追加: ')+it.code+' '+it.name+(res.scanned!==it.code?'（旧 '+res.scanned+'）':'')); return; } setScanMsg('旧コード '+res.scanned+' は複数の新品目に対応。選択してください:'); showPick(res.items); }
-  function handlePicked(it){ if(!it) return; if(MODE==='check'){ doCheck(it); } else if(MODE==='count'){ addCountLine(it); } else { fillTopEmpty(it); } }
+  function handlePicked(it){ if(!it) return; if(MODE==='check'){ doCheck(it); } else if(MODE==='count'){ focusMyLine_(it); } else { fillTopEmpty(it); } }
   function fillTopEmpty(it){ var i=-1; for(var k=0;k<LINES.length;k++){ if(!LINES[k].itemId){ i=k; break; } } if(i<0){ LINES.push(blankRow()); renderRows(); i=LINES.length-1; } LINES[i].itemId=it.id; LINES[i].code=it.code; LINES[i].name=it.name; if(!LINES[i].qty||Number(LINES[i].qty)<=0) LINES[i].qty=1; var inp=document.querySelector('input.iteminput[data-i="'+i+'"]'); if(inp) inp.value=it.code; var nc=nameCell(i); if(nc) nc.textContent=it.name; var q=document.querySelector('input.qtyinput[data-i="'+i+'"]'); if(q) q.value=LINES[i].qty; updateSummary(); updateSubmitState(); }
   function showPick(items){ var el=$('scanPick'); el.innerHTML=items.map(function(it,k){ return '<div data-pk="'+k+'" style="padding:10px;border-top:1px solid #eef0f4;cursor:pointer"><span class="code">'+esc(it.code)+'</span>'+esc(it.name)+'</div>'; }).join(''); el.querySelectorAll('div[data-pk]').forEach(function(d){ d.addEventListener('click', function(){ var it=items[+d.dataset.pk]; handlePicked(it); setScanMsg((MODE==='check'?'在庫照会: ':'✓ 追加: ')+it.code+' '+it.name); hidePick(); }); }); el.style.display='block'; }
   function hidePick(){ $('scanPick').style.display='none'; }
